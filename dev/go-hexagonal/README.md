@@ -2,7 +2,7 @@
 description: Go hexagonal architecture agents and skills — TDD pipeline with red/green separation, security-first review, and structured feature planning. Benchmarked across 50+ runs.
 tags:
   - golang
-  - hexagonal-architecture
+  - hexagonal
   - tdd
   - testcontainers
   - microservices

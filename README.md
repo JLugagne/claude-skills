@@ -7,6 +7,7 @@ A [claude-mercato](https://github.com/JLugagne/claude-mercato) market — a coll
 | Profile | Description |
 |---------|-------------|
 | [`dev/go-hexagonal`](dev/go-hexagonal/README.md) | Go hexagonal architecture — TDD pipeline, security-first review, structured feature planning |
+| [`tools/mct-cli`](tools/mct-cli/README.md) | Reference skill for mct, the Git-based package manager for Claude agents and skills |
 
 ## Installation
 
@@ -67,11 +68,9 @@ Longer description, usage examples, etc.
 
 ### 4. Write agents
 
-Each agent file needs `type: agent` and `description`. If the agent relies on a skill, declare it with `requires_skills` so `mct` auto-installs it:
 
 ```yaml
 ---
-type: agent
 description: What this agent does and when to use it.
 requires_skills:
   - file: <category>/<name>/skills/my-skill.md
@@ -82,18 +81,30 @@ Agent prompt content here...
 
 ### 5. Write skills
 
-Each skill file needs `type: skill` and `description`:
-
 ```yaml
 ---
-type: skill
 description: What this skill provides to agents that use it.
 ---
 
 Skill content here — reference material, patterns, examples...
 ```
 
-### 6. Verify with mct
+### 6. Lint before opening a PR
+
+Run `mct lint` from the repo root to check your profile for structural issues before submitting:
+
+```bash
+mct lint .
+```
+
+It checks:
+- Presence of a `README.md` at the profile level
+- Tags declared in the README frontmatter
+- At least one agent or skill per profile
+
+Fix all errors and resolve warnings before opening a pull request.
+
+### 7. Verify with mct
 
 After pushing, register the market locally and confirm `mct` indexes your profile:
 

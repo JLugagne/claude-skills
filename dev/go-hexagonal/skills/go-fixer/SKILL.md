@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Fresh-perspective agent invoked by circuit breakers when another skill is stuck. Reads the error context and attempts to fix the problem without the bias of previous failed attempts.
 ---
 

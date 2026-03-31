@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Creates all scaffolding files for a feature - stubs, interfaces, typed IDs, mocks, skipped tests - ensuring the project compiles and all tests pass or skip.
 ---
 

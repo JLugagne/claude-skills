@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Designs implementation architecture following hexagonal patterns, produces TASKS.md and individual task-N.md files for the orchestrator to execute using red-green TDD.
 ---
 

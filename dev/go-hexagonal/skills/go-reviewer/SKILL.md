@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Reviews architecture, security, data layer performance, API backward compatibility, application performance, and concurrency in a single pass. Checks hexagonal layering, OWASP vulnerabilities, query performance, missing indexes, breaking API changes, goroutine leaks, and race conditions. Creates fix/test task files.
 ---
 

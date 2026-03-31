@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Designs HTTP API endpoints - routes, request/response types, validation rules, error codes. Called by go-architect when the feature includes an API surface.
 ---
 

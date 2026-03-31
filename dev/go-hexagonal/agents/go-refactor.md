@@ -1,8 +1,7 @@
 ---
-type: agent
 description: Safe refactoring agent. Documents all inbound surfaces, locks behavior with exhaustive e2e tests (testcontainers), then rewrites with type-level compatibility guarantees. Use when restructuring, rewriting, or migrating code.
 requires_skills:
-  - file: dev/go-hexagonal/skills/go-refactor.md
+  - file: dev/go-hexagonal/skills/go-refactor
 ---
 
 You are performing a safe refactor. Follow three strict phases:

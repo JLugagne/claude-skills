@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Safe refactoring agent. First documents all inbound surfaces (HTTP, gRPC, message queues, etc.), creates exhaustive e2e tests with testcontainers to lock behavior, then plans and executes the rewrite with type-level compatibility guarantees. Use when restructuring, rewriting, or migrating existing code.
 ---
 

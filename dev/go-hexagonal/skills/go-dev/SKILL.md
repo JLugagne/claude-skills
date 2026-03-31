@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Green phase TDD - implements code to make failing tests pass. Never touches test files. Reports disagreements with test expectations.
 ---
 

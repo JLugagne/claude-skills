@@ -1,5 +1,4 @@
 ---
-type: skill
 description: Red phase TDD - writes failing unit tests, contract tests, and e2e API tests. Covers all test levels in a single pass. Never touches implementation code.
 ---
 

@@ -1,5 +1,7 @@
 ---
 description: Green phase TDD — implements code to make failing tests pass. Never touches test files. Covers app services, HTTP handlers, converters, and PG repositories.
+skills:
+  - go-dev
 requires_skills:
   - file: dev/go-hexagonal/skills/go-dev
 ---

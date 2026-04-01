@@ -1,5 +1,7 @@
 ---
 description: Bootstraps a new Go project from scratch with hexagonal architecture, testcontainers, CI, and the full skill/agent suite. Use when starting a new project or microservice.
+skills:
+  - go-bootstrap
 requires_skills:
   - file: dev/go-hexagonal/skills/go-bootstrap
 ---

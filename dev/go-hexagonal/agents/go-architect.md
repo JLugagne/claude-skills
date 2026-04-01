@@ -1,5 +1,7 @@
 ---
 description: Designs implementation architecture following hexagonal patterns, produces TASKS.md and individual task files with security constraints embedded. Called by go-pm after FEATURE.md is written.
+skills:
+  - go-architect
 requires_skills:
   - file: dev/go-hexagonal/skills/go-architect
 ---

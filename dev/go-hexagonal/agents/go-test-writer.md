@@ -1,5 +1,7 @@
 ---
 description: Red phase TDD — writes failing unit tests, contract tests, e2e tests, and security tests. Never touches implementation code.
+skills:
+  - go-test-writer
 requires_skills:
   - file: dev/go-hexagonal/skills/go-test-writer
 ---

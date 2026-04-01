@@ -1,5 +1,7 @@
 ---
 description: Strict product manager that interrogates about feature specifications, writes FEATURE.md, then hands off to go-architect for task planning and go-runner for execution. Use when starting a new feature.
+skills:
+  - go-pm
 requires_skills:
   - file: dev/go-hexagonal/skills/go-pm
 ---

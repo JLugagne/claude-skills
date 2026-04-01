@@ -1,5 +1,7 @@
 ---
 description: Reviews architecture, security, data layer, API backward compatibility, application performance, and concurrency in a single pass. Creates fix/test task files in .plan/<feature-slug>/.
+skills:
+  - go-reviewer
 requires_skills:
   - file: dev/go-hexagonal/skills/go-reviewer
 ---

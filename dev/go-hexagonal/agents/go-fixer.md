@@ -1,5 +1,7 @@
 ---
 description: Fresh-perspective agent for unblocking stuck tasks. Can modify both tests and implementation. Invoked by circuit breakers.
+skills:
+  - go-fixer
 requires_skills:
   - file: dev/go-hexagonal/skills/go-fixer
 ---

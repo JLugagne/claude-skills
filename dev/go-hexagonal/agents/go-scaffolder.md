@@ -1,5 +1,7 @@
 ---
 description: Creates all scaffolding files for a Go feature — stubs, interfaces, typed IDs, mocks, skipped tests. Use for scaffold phase tasks.
+skills:
+  - go-scaffolder
 requires_skills:
   - file: dev/go-hexagonal/skills/go-scaffolder
 ---

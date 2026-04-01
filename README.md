@@ -14,14 +14,14 @@ A [claude-mercato](https://github.com/JLugagne/claude-mercato) market — a coll
 Register this repo as a market with `mct`:
 
 ```bash
-mct market add claude-skills https://github.com/JLugagne/claude-skills.git
+mct market add https://github.com/JLugagne/claude-skills
 ```
 
 Then browse and install:
 
 ```bash
 mct search "go hexagonal"
-mct add claude-skills/dev/go-hexagonal/agents/go-pm.md
+mct add JLugagne/claude-skills@dev/go-hexagonal
 ```
 
 ---

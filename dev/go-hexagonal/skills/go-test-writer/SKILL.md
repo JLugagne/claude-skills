@@ -196,6 +196,29 @@ Return ONLY:
 
 Do NOT return file contents.
 
+## Red Phase Verification (mandatory)
+
+After writing tests, you MUST verify the red phase:
+
+```bash
+# 1. Tests compile
+go build ./...
+
+# 2. Tests FAIL (not error)
+go test ./internal/<context>/... -run TestNewPattern -count=1 -v
+```
+
+Report in your summary:
+- Which tests were written
+- That they COMPILE (build passes)
+- That they FAIL for the RIGHT reason (feature not implemented)
+- The actual failure message
+
+A test that errors (import failure, syntax error) is NOT a valid red.
+A test that passes is NOT a valid red (you're testing existing behavior).
+
+Only a test that compiles, runs, and fails because the feature is missing is a valid red.
+
 ## Guidelines
 
 - Read each file at most once.

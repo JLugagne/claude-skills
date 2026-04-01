@@ -15,13 +15,15 @@ Read .plan/<feature-slug>/TASKS.md for the task list. For each task, read .plan/
 - go-dev tasks → subagent_type: go-dev
 - go-reviewer tasks → subagent_type: go-reviewer
 - go-fixer tasks → subagent_type: go-fixer
+- go-debugger escalation → subagent_type: go-debugger
+- go-finish (after all tasks) → subagent_type: go-finish
 
 PARALLEL EXECUTION IS CRITICAL FOR SPEED:
 - After scaffold completes, ALL red tasks that depend only on scaffold should launch IN THE SAME MESSAGE as multiple Agent calls. This is typically 3-5 red tasks at once.
 - Independent green tasks (touching different files) can also run in parallel.
 - NEVER run tasks one-by-one when they could run in parallel — sequential dispatch wastes minutes.
 
-After each GREEN task, validate with `go build ./...` and `go test ./...`. Write summaries to .plan/<feature-slug>/task-N_SUMMARY.md. Report one line per task.
+After each GREEN task, validate with `go build ./...` and `go test ./... -count=1 -race`. Write summaries to .plan/<feature-slug>/task-N_SUMMARY.md. Report one line per task. After ALL tasks complete, invoke go-finish for feature closure.
 
 CRITICAL — context passing for downstream tasks:
 When dispatching a task, append to its prompt ALL dependency summaries (.plan/<feature-slug>/task-dep_SUMMARY.md). These summaries contain the exact files that were created or modified — the downstream subagent needs this to know which files to read beyond what's listed in "Relevant Code Files" in the task file. Files modified by parent tasks (e.g., config.go, init.go) may not be in the task's original file list but are essential context.

@@ -185,11 +185,18 @@ added (which requires a new scaffolding task).
 
 ## Verification
 
-After implementing, run:
+After implementing, run ALL of these and report the actual output:
 
-1. `go build ./...` — passes
-2. `go test ./... -run <TestPattern> -count=1 -v` — all previously red tests are now green
-3. `go test ./... -count=1` — full suite passes (no regressions introduced)
+1. `go build ./...` — report exit code
+2. `go test ./... -run <TestPattern> -count=1 -v -race` — report which tests pass/fail
+3. `go test ./... -count=1 -race` — report full suite results
+
+CRITICAL: Always include `-race` flag. Always include `-count=1` (no cache).
+Report the actual command output, not a summary. "Tests pass" without output
+is a claim, not evidence. The orchestrator needs evidence.
+
+If any step fails, do NOT claim the task is done. Report the actual failure
+in your summary. The orchestrator will decide next steps.
 
 ## Circuit Breaker
 

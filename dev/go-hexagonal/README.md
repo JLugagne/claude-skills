@@ -16,16 +16,19 @@ Production-ready Go code generation following hexagonal architecture with strict
 ## Pipeline Architecture
 
 ```
-go-pm (Opus)          — interrogates user, writes FEATURE.md
-  └── go-architect (Opus)
-        ├── go-api-designer (Sonnet)  — HTTP routes, request/response types
-        ├── writes TASKS.md + task-N.md (security constraints embedded)
-        └── go-runner (Sonnet)        — thin dispatcher, never writes code
-              ├── go-scaffolder        — stubs, interfaces, mocks
-              ├── go-test-writer       — red phase (unit, contract, e2e)
-              ├── go-dev               — green phase (implementation)
-              ├── go-reviewer          — arch + security + DBA review
-              └── go-fixer (Opus)      — circuit breaker recovery
+go-brainstorm (Opus)    — explores problem space, proposes approaches, validates direction
+  └── go-pm (Opus)      — interrogates user, writes FEATURE.md
+        └── go-architect (Opus)
+              ├── go-api-designer (Sonnet)  — HTTP routes, request/response types
+              ├── writes TASKS.md + task-N.md (security constraints embedded)
+              └── go-runner (Sonnet)        — thin dispatcher, never writes code
+                    ├── go-scaffolder        — stubs, interfaces, mocks
+                    ├── go-test-writer       — red phase (unit, contract, e2e) [+ red verification]
+                    ├── go-dev               — green phase (implementation) [+ go-verify evidence]
+                    ├── go-reviewer          — two-pass: spec compliance then code quality
+                    ├── go-fixer (Opus)      — circuit breaker recovery
+                    ├── go-debugger (Opus)   — systematic root cause (escalation from fixer)
+                    └── go-finish (Sonnet)    — verification, acceptance criteria, cleanup, integration
 ```
 
 Opus plans and recovers. Sonnet executes. This split cuts cost by ~66% vs running everything on Opus.
@@ -61,7 +64,10 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 | `go-dev` | sonnet | Green phase — implementation to make failing tests pass |
 | `go-reviewer` | sonnet | Plan-first: architecture, security (IDOR/injection), DBA review |
 | `go-fixer` | opus | Circuit breaker recovery — modifies both tests and implementation |
-| `go-runner` | sonnet | Task dispatcher — coordinates subagents, never writes code |
+| `go-runner` | sonnet | Task dispatcher — coordinates subagents, never writes code, invokes go-finish after all tasks |
+| `go-brainstorm` | opus | Problem exploration, approach validation, scope check |
+| `go-debugger` | opus | Systematic root cause investigation through hexagonal layers |
+| `go-finish` | sonnet | Feature closure — verification, acceptance criteria, cleanup, integration |
 | `go-refactor` | opus | Safe rewrite: document surfaces → lock with tests → rewrite |
 
 ## Key Practices
@@ -89,6 +95,12 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 - **Optimistic locking** for concurrent writes: use a `version` field, return `ErrConcurrentModification` when `RowsAffected() == 0`.
 - **Keep transactions short**: no HTTP or queue calls inside transactions. Use the outbox pattern for reliable event publishing after a DB write.
 - **Data migrations via go-migrator**: zero-downtime, reversible, batched, testcontainers-tested. Always preserve old data until validation passes.
+
+### Verification
+- **Evidence before claims**: every completion claim must include actual command output (go build, go test with -race and -count=1). No stale runs, no verbal claims.
+- **Two-pass review**: spec compliance checked before code quality.
+- **Systematic debugging**: root cause investigation before fixes. go-debugger escalation when go-fixer circuit breaker isn't enough.
+- **Feature closure**: go-finish verifies acceptance criteria line-by-line against FEATURE.md before integration.
 
 ### Pipeline & Cost
 - Parallel red tasks after scaffold (typically 3–5 at once). Sequential green tasks (dependency order).

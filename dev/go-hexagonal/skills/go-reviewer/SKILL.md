@@ -184,6 +184,30 @@ For each issue found, create a task file at `.plan/<feature-slug>/task-rev-<N>.m
 
 Append ALL new tasks to `.plan/<feature-slug>/TASKS.md`.
 
+## Two-Pass Review
+
+The review runs in two logical passes within the single review task:
+
+### Pass 1: Spec Compliance
+Read `.plan/<feature-slug>/FEATURE.md` and check:
+- Every acceptance criterion has at least one task that addresses it
+- Every API endpoint in the spec has an e2e test task
+- Every business rule has a unit or contract test task
+- Every security consideration has a test + implementation task pair
+- No extra functionality was added beyond the spec (scope creep)
+
+If spec compliance fails, create task files to close the gaps BEFORE doing Pass 2.
+
+### Pass 2: Code Quality
+Only after spec compliance passes, review code quality:
+- Architecture checklist (existing)
+- Security checklist (existing)
+- Data layer checklist (existing)
+- Performance checklist (existing)
+
+This ordering matters: fixing code quality issues on code that doesn't match the spec
+is wasted effort.
+
 ## Summary Output
 
 Return ONLY:

@@ -63,6 +63,8 @@ Skill mapping from task files:
 - `go-migrator` → subagent_type: `go-migrator`
 - `go-reviewer` → subagent_type: `go-reviewer`
 - `go-fixer` → subagent_type: `go-fixer`
+- `go-debugger` → subagent_type: `go-debugger` (escalation from fixer)
+- `go-finish` → subagent_type: `go-finish` (after all tasks complete)
 
 ### Step 4: Write Summary
 
@@ -84,10 +86,36 @@ Set task to `done` in `.plan/<feature-slug>/TASKS.md`. Loop back to Step 2.
 
 ### Step 7: Completion
 
-When all tasks are `done`:
-1. `go test ./... -count=1`
-2. `go build ./...`
-3. Report: tasks completed, test results, definition of done check.
+When all tasks are `done`, dispatch go-finish with:
+- The feature slug
+- A one-line summary of tasks completed
+
+Do NOT run final verification or present integration options yourself.
+go-finish handles verification, acceptance criteria, cleanup, and integration choice.
+
+## Verification Protocol (runner double-check)
+
+Each subagent is responsible for running go-verify checks and reporting evidence.
+The runner acts as a safety net — it re-runs verification independently to catch
+cases where a subagent claims success without proper evidence.
+
+After each GREEN task, the runner MUST:
+
+1. Run `go build ./...` — report exit code
+2. Run `go test ./... -count=1 -race` — report full output
+3. Only mark task complete if BOTH pass with evidence
+
+Do NOT mark a task as done based on:
+- The subagent's verbal claim ("tests pass")
+- A previous test run (stale)
+- Partial test execution (only the specific package)
+
+The full suite with `-race` and `-count=1` is the minimum. Report actual output
+in the task summary.
+
+After ALL tasks complete, invoke go-finish to handle feature closure.
+Do NOT present integration options yourself — go-finish handles verification,
+acceptance criteria, cleanup, and integration choice.
 
 ## Circuit Breaker Handling
 
@@ -95,7 +123,19 @@ When a subagent returns `CIRCUIT_BREAK:`:
 1. Write to `.plan/<feature-slug>/task-<id>_SUMMARY.md` with status `circuit_break`
 2. Dispatch a fresh agent with the error context, original task, and feature context
 3. The fixer can modify both tests and implementation
-4. If fixer also fails, mark as `blocked` and report to user
+4. If fixer also fails → escalate to go-debugger (see below)
+
+## Debugging Escalation
+
+If a subagent reports CIRCUIT_BREAK and go-fixer also fails (returns `NEEDS_INVESTIGATION:`):
+1. Do NOT retry with another go-fixer
+2. Dispatch go-debugger with the full error context:
+   - Original task description
+   - All error messages from both the original agent and go-fixer
+   - List of files involved
+   - What was already tried (from go-fixer summary)
+3. go-debugger will perform systematic root cause investigation
+4. If go-debugger escalates to user, stop the pipeline and relay the debug report
 
 ## Status Reporting
 

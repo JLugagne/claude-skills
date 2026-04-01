@@ -350,7 +350,8 @@ jobs:
 
 ### Install Skill/Agent Suite
 
-Copy all 12 agent files to `.claude/agents/`:
+Copy all 15 agent files to `.claude/agents/`:
+- `go-brainstorm.md` — Problem exploration (approach validation, scope check)
 - `go-pm.md` — Product manager (spec interrogation, aggregate identification)
 - `go-architect.md` — Architecture design (TASKS.md generation)
 - `go-api-designer.md` — HTTP API design (routes, types, validation)
@@ -360,7 +361,9 @@ Copy all 12 agent files to `.claude/agents/`:
 - `go-reviewer.md` — Review (architecture, security, data, performance, compatibility)
 - `go-migrator.md` — Data migrations (backfill, transform, split)
 - `go-fixer.md` — Circuit breaker recovery (fresh-perspective fixes)
+- `go-debugger.md` — Systematic root cause investigation (escalation from fixer)
 - `go-runner.md` — Task execution (dispatch, validate, report)
+- `go-finish.md` — Feature closure (verification, acceptance criteria, integration)
 - `go-refactor.md` — Safe refactoring (document, lock, rewrite)
 - `go-bootstrap.md` — This file
 
@@ -371,7 +374,7 @@ After bootstrapping:
 2. `go test -race ./... -short` — health check test passes
 3. `docker-compose up -d` — infrastructure starts
 4. `curl localhost:<port>/health` — returns `{"status":"ok"}`
-5. `.claude/agents/` has 12 agent files
+5. `.claude/agents/` has 15 agent files
 6. `domain/services/` directory exists (inbound port interfaces)
 7. `domain/repositories/` directory exists (outbound port interfaces)
 8. `pkg/<context>/events/` directory exists (event contracts)

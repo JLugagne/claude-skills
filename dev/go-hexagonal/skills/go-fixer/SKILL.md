@@ -57,3 +57,22 @@ When done, return:
 - Keep changes minimal. You're unblocking the pipeline, not improving the codebase. Extra changes create surprises for the next agent in the chain and make it harder for the orchestrator to understand what fixed the problem.
 - If the problem is in the test expectation rather than the implementation, say so clearly in your summary. The orchestrator needs to know whether the contract changed — if it did, downstream tasks may need adjustment.
 - If you can't fix it after reading the code, say so honestly. A candid "I don't see the issue" is more useful than random changes — it tells the orchestrator to escalate to the user rather than wasting another cycle.
+
+## Escalation to go-debugger
+
+If after reading the code and attempting a fix, you STILL can't resolve the issue:
+
+1. Do NOT attempt a second fix based on guessing
+2. Return a summary starting with `NEEDS_INVESTIGATION:` including:
+   - What you read and understood
+   - What you tried
+   - Why it didn't work
+   - Which hexagonal layer you believe the root cause is in (or "unknown")
+
+The orchestrator will dispatch go-debugger for systematic root cause investigation.
+go-debugger has a structured 4-phase methodology that's more thorough than
+fresh-perspective fixing.
+
+The distinction:
+- go-fixer = "fresh eyes on a known problem" (quick recovery)
+- go-debugger = "structured investigation of an unknown problem" (deep analysis)

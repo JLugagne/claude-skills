@@ -14,132 +14,33 @@ You create the initial scaffolding for a feature. After your work, the project c
 - **Domain errors:** Sentinel errors using `domainerror.New(code, message)`
 - **Value objects:** Enums as `type XxxStatus string` with constants
 - **Unit of Work interface** (if the task specifies multi-repo atomic operations):
-  ```go
-  // domain/uow/uow.go
-  type UnitOfWork interface {
-      Do(ctx context.Context, fn func(ctx context.Context, repos Repositories) error) error
-  }
-
-  type Repositories interface {
-      // One method per repository — returns the transactional version
-      Xxx() xxx.XxxRepository
-  }
-  ```
+  Read the [Unit of Work Interface](patterns.md#unit-of-work-interface) pattern in patterns.md when creating this.
   Also create a mock UoW for testing:
-  ```go
-  // domain/uow/uowtest/mock.go
-  type MockUnitOfWork struct {
-      DoFunc func(ctx context.Context, fn func(ctx context.Context, repos uow.Repositories) error) error
-  }
-  func (m *MockUnitOfWork) Do(ctx context.Context, fn func(ctx context.Context, repos uow.Repositories) error) error {
-      if m.DoFunc == nil { panic("called not defined DoFunc") }
-      return m.DoFunc(ctx, fn)
-  }
-  ```
+  Read the [Mock Unit of Work](patterns.md#mock-unit-of-work) pattern in patterns.md when creating this.
 
 ### Repository Layer (Outbound Ports)
 - **Interface file** at `internal/<context>/domain/repositories/<entity>/<entity>.go`:
-  ```go
-  type XxxRepository interface {
-      Create(ctx context.Context, projectID types.ProjectID, xxx domain.Xxx) error
-      FindByID(ctx context.Context, projectID types.ProjectID, id types.XxxID) (*domain.Xxx, error)
-      List(ctx context.Context, projectID types.ProjectID, ...) ([]domain.Xxx, error)
-      Delete(ctx context.Context, projectID types.ProjectID, id types.XxxID) error
-      // ALL methods MUST include projectID to prevent IDOR.
-      // Parameter order: broad to narrow — (projectID, entityID) — never reversed.
-      // This convention keeps all repositories consistent across the codebase.
-  }
-  ```
+  Read the [Repository Interface](patterns.md#repository-interface) pattern in patterns.md when creating this.
 
 - **Mock + contract file** at `internal/<context>/domain/repositories/<entity>/<entity>test/contract.go`:
-  ```go
-  type MockXxxRepository struct {
-      CreateFunc   func(ctx context.Context, ...) error
-      FindByIDFunc func(ctx context.Context, ...) (*domain.Xxx, error)
-  }
-
-  func (m *MockXxxRepository) Create(ctx context.Context, ...) error {
-      if m.CreateFunc == nil {
-          panic("called not defined CreateFunc")
-      }
-      return m.CreateFunc(ctx, ...)
-  }
-
-  // Compile-time check
-  var _ <entity>.XxxRepository = (*MockXxxRepository)(nil)
-
-  // Contract test function
-  func XxxContractTesting(t *testing.T, repo <entity>.XxxRepository, ...) {
-      t.Run("Contract: Create stores and FindByID retrieves", func(t *testing.T) {
-          t.Skip("TODO: waiting for red")
-      })
-      // one t.Run per expected behavior, all with t.Skip()
-  }
-  ```
+  Read the [Repository Mock and Contract](patterns.md#repository-mock-and-contract) pattern in patterns.md when creating this.
 
 ### Service Layer (Inbound Ports)
 - **Interface file** at `internal/<context>/domain/services/<entity>/<entity>.go`:
-  ```go
-  type XxxService interface {
-      Create(ctx context.Context, projectID types.ProjectID, name string) (*domain.Xxx, error)
-      GetByID(ctx context.Context, projectID types.ProjectID, id types.XxxID) (*domain.Xxx, error)
-      List(ctx context.Context, projectID types.ProjectID, ...) ([]domain.Xxx, error)
-      Delete(ctx context.Context, projectID types.ProjectID, id types.XxxID) error
-  }
-  ```
+  Read the [Service Interface](patterns.md#service-interface) pattern in patterns.md when creating this.
 
 - **Mock + contract file** at `internal/<context>/domain/services/<entity>/<entity>test/contract.go`:
-  ```go
-  type MockXxxService struct {
-      CreateFunc   func(ctx context.Context, ...) (*domain.Xxx, error)
-      GetByIDFunc  func(ctx context.Context, ...) (*domain.Xxx, error)
-  }
-
-  func (m *MockXxxService) Create(ctx context.Context, ...) (*domain.Xxx, error) {
-      if m.CreateFunc == nil {
-          panic("called not defined CreateFunc")
-      }
-      return m.CreateFunc(ctx, ...)
-  }
-
-  // Compile-time check
-  var _ <entity>.XxxService = (*MockXxxService)(nil)
-
-  // Contract test function — runs against both mock and real app implementation
-  func XxxServiceContractTesting(t *testing.T, svc <entity>.XxxService, ...) {
-      t.Run("Contract: Create and GetByID", func(t *testing.T) {
-          t.Skip("TODO: waiting for red")
-      })
-  }
-  ```
+  Read the [Service Mock and Contract](patterns.md#service-mock-and-contract) pattern in patterns.md when creating this.
 
   Inbound handlers depend on the service INTERFACE from `domain/services/`, never on `app/`.
   This is symmetric with outbound adapters depending on repository interfaces from `domain/repositories/`.
 
 ### Outbound Layer (Adapters)
 - **Repository implementation** at `internal/<context>/outbound/<adapter>/<adapter>_<entity>.go`:
-  ```go
-  type xxxRepository struct {
-      // database pool, client, connection — depends on the adapter
-  }
-
-  // Compile-time check
-  var _ <entity>.XxxRepository = (*xxxRepository)(nil)
-
-  func (r *xxxRepository) Create(ctx context.Context, ...) error {
-      return nil // TODO: implement
-  }
-  ```
+  Read the [Repository Implementation (Outbound Adapter)](patterns.md#repository-implementation-outbound-adapter) pattern in patterns.md when creating this.
 
 - **Repository contract test** at `internal/<context>/outbound/<adapter>/<entity>_contract_test.go`:
-  ```go
-  // Contract tests verify the adapter implements the repository interface correctly
-  // against real infrastructure (testcontainers). This is separate from unit tests.
-  func TestXxxRepositoryContract(t *testing.T) {
-      t.Skip("TODO: waiting for red")
-      // Will call <entity>test.XxxContractTesting(t, realRepo, ...)
-  }
-  ```
+  Read the [Repository Contract Test](patterns.md#repository-contract-test) pattern in patterns.md when creating this.
 
 - **Unit test** at `internal/<context>/outbound/<adapter>/<adapter>_<entity>_test.go`:
   ```go
@@ -157,14 +58,7 @@ You create the initial scaffolding for a feature. After your work, the project c
 
 ### App Layer
 - **Service implementation** — App implements the service interface from `domain/services/`:
-  ```go
-  // Compile-time check
-  var _ <entity>.XxxService = (*App)(nil)
-
-  func (a *App) CreateXxx(ctx context.Context, ...) (*domain.Xxx, error) {
-      return nil, nil // TODO: implement
-  }
-  ```
+  Read the [App Service Implementation](patterns.md#app-service-implementation) pattern in patterns.md when creating this.
 
 - **App unit test** at `internal/<context>/app/<entity>_test.go`:
   ```go
@@ -174,121 +68,37 @@ You create the initial scaffolding for a feature. After your work, the project c
   ```
 
 - **App contract test** at `internal/<context>/app/<entity>_contract_test.go`:
-  ```go
-  // Contract tests verify the app service works correctly with real repositories
-  // (testcontainers). This tests the full app → repo → db flow without HTTP.
-  func TestAppXxxContract(t *testing.T) {
-      t.Skip("TODO: waiting for red")
-      // Will create real repos via testcontainers, build real App, test use cases
-  }
-  ```
+  Read the [App Contract Test](patterns.md#app-contract-test) pattern in patterns.md when creating this.
 
 ### Public Types (pkg layer)
 - **HTTP types** at `pkg/<context>/<entity>.go`:
-  ```go
-  type CreateXxxRequest struct {
-      Type    string `json:"type"`
-      Message string `json:"message"`
-  }
-
-  type XxxResponse struct {
-      ID        string `json:"id"`
-      ProjectID string `json:"project_id"`
-      Type      string `json:"type"`
-      Message   string `json:"message"`
-      Read      bool   `json:"read"`
-      CreatedAt string `json:"created_at"`
-  }
-  ```
+  Read the [HTTP Types (pkg layer)](patterns.md#http-types-pkg-layer) pattern in patterns.md when creating this.
 
 - **gRPC protos** at `pkg/<context>/grpc/proto/<entity>.proto` (if applicable)
 - **Generated gRPC code** at `pkg/<context>/grpc/` (run `protoc` to generate)
 
 - **Event types** at `pkg/<context>/events/` (if the feature consumes or emits events):
-  ```go
-  // pkg/<context>/events/consumed.go — events this context receives
-  type ProjectCreatedEvent struct {
-      ProjectID string `json:"project_id"`
-      Name      string `json:"name"`
-      Timestamp string `json:"timestamp"`
-  }
-
-  // pkg/<context>/events/emitted.go — events this context publishes
-  type NotificationSentEvent struct {
-      NotificationID string `json:"notification_id"`
-      ProjectID      string `json:"project_id"`
-      Type           string `json:"type"`
-      Timestamp      string `json:"timestamp"`
-  }
-  ```
+  Read the [Event Types](patterns.md#event-types) pattern in patterns.md when creating this.
   Event types are public contracts — other services depend on them. Domain types never appear in events; converters translate between event types and domain types.
 
 ### Inbound Layer (per protocol: http, grpc, amqp, ...)
 - **Handler stub** at `internal/<context>/inbound/<protocol>/<entity>_handler.go`:
-  ```go
-  type XxxHandler struct {
-      svc <entity>.XxxService  // service INTERFACE from domain/services/, NOT *app.App
-  }
-
-  func NewXxxHandler(svc <entity>.XxxService) *XxxHandler {
-      return &XxxHandler{svc: svc}
-  }
-  ```
+  Read the [Inbound Handler Stub](patterns.md#inbound-handler-stub) pattern in patterns.md when creating this.
 - **Converter** at `internal/<context>/inbound/<protocol>/converters/<entity>.go`:
-  ```go
-  // Inbound: public request → domain type
-  func ToDomainXxx(req pkgcontext.CreateXxxRequest, projectID types.ProjectID) domain.Xxx {
-      return domain.Xxx{} // TODO: implement
-  }
-
-  // Outbound: domain type → public response
-  func ToPublicXxx(x domain.Xxx) pkgcontext.XxxResponse {
-      return pkgcontext.XxxResponse{} // TODO: implement
-  }
-
-  func ToPublicXxxList(items []domain.Xxx) []pkgcontext.XxxResponse {
-      return MapSlice(items, ToPublicXxx)
-  }
-  ```
+  Read the [Inbound Converter](patterns.md#inbound-converter) pattern in patterns.md when creating this.
 
   Domain types NEVER appear in HTTP/gRPC responses. Every field must be explicitly mapped through the converter. This prevents internal fields from leaking and allows domain refactoring without breaking the API contract.
 
 - **Converter test** at `internal/<context>/inbound/<protocol>/converters/<entity>_test.go`:
-  ```go
-  func TestToPublicXxx(t *testing.T) {
-      t.Skip("TODO: waiting for red")
-  }
-  func TestToDomainXxx(t *testing.T) {
-      t.Skip("TODO: waiting for red")
-  }
-  ```
+  Read the [Converter Test](patterns.md#converter-test) pattern in patterns.md when creating this.
 
 ### Wiring
 - **Update `internal/<context>/init.go`** — `Setup()` creates repos, creates the app (which implements the service interface), then passes the app as the service interface to handlers. Do NOT put wiring in `main.go` — main only calls `Setup()` and starts the server.
-  ```go
-  func Setup(pool *pgxpool.Pool) (*http.ServeMux, error) {
-      // Outbound adapters
-      xxxRepo := pg.NewXxxRepository(pool)
-      // App service (implements domain/services/<entity>.XxxService)
-      xxxApp := app.New(xxxRepo)
-      // Inbound handlers (receive the service INTERFACE, not *app.App)
-      xxxHandler := http.NewXxxHandler(xxxApp) // xxxApp satisfies XxxService interface
-      // Register routes
-      ...
-  }
-  ```
+  Read the [Wiring (init.go)](patterns.md#wiring-initgo) pattern in patterns.md when creating this.
 
 ### E2E Test Setup (testcontainers)
 - **E2E test setup** at `tests/e2e-api/setup_test.go` (if not already present):
-  ```go
-  package e2e_api
-
-  // TestMain starts a PostgreSQL testcontainer, runs migrations, seeds data,
-  // and starts the HTTP server. All e2e tests in this package run against it.
-  func TestMain(m *testing.M) {
-      // t.Skip("TODO: waiting for e2e red")
-  }
-  ```
+  Read the [E2E Test Setup](patterns.md#e2e-test-setup) pattern in patterns.md when creating this.
 
 ### Security Tests
 - **Security test stubs** at appropriate location:

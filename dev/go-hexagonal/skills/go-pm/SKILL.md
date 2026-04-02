@@ -107,66 +107,7 @@ Once the spec is GREEN:
 
 The slug is used by all downstream skills to namespace plan files. Multiple features can be planned and executed independently in the same repo.
 
-Write `.plan/<feature-slug>/FEATURE.md`:
-
-```markdown
-# Feature: [Name]
-
-## Description
-[1-2 sentences]
-
-## Entities & Aggregates
-- **[Entity]** (aggregate root): [fields and types]
-  - Invariants:
-    - [Rule the root enforces — e.g., "cannot receive notifications when archived"]
-    - [Rule — e.g., "max 100 active tasks"]
-  - Validation methods: [e.g., `CanReceiveNotification() error`, `CanAddTask() error`]
-- **[ChildEntity]** (child of [Root]): [fields and types]
-  - Created/modified only after root validation passes
-- **[IndependentEntity]** (aggregate root): [fields and types]
-  - Invariants: [or "none — simple CRUD"]
-
-For simple CRUD entities with no parent constraints, mark them as their own aggregate root with no invariants. Not every entity needs complex aggregate modeling — only document invariants that actually exist.
-
-## API Endpoints
-- [METHOD /path]: [description]
-  - Request: [shape]
-  - Response: [shape]
-  - Errors: [codes and conditions]
-
-## Events
-- **Consumed**: [EventName from pkg/<context>/events/consumed.go — trigger and expected side effect]
-- **Emitted**: [EventName to pkg/<context>/events/emitted.go — when published and schema]
-
-## Database Changes
-- [Table]: [new/altered columns, indexes, constraints]
-
-## Business Rules
-1. [Rule]
-2. [Rule]
-
-## Security Considerations
-- All repository methods for this entity MUST include the parent entity's ID (e.g., projectID) in every operation — FindByID, Update, Delete, MarkAsRead — to prevent cross-project data access (IDOR).
-- SQL queries MUST filter by both entity ID AND parent ID: `WHERE id = $1 AND project_id = $2`.
-- Contract tests MUST include "wrong project" scenarios.
-- Error responses MUST use structured JSON: `{"error":{"code":"...","message":"..."}}`.
-- App service methods that operate on child entities MUST load the aggregate root and call its validation method before proceeding. This ensures invariants cannot be bypassed by calling the child repository directly.
-- [Additional security items specific to this feature]
-
-## Edge Cases & Error Handling
-- [Case]: [expected behavior]
-- [Aggregate root in invalid state]: [e.g., "CreateNotification on archived project → ErrProjectArchived"]
-
-## Definition of Done
-- [ ] [Criterion — each must be objectively verifiable]
-- [ ] All tests pass (`go test ./...`)
-- [ ] Project compiles (`go build ./...`)
-- [ ] E2E tests cover happy path and error cases
-- [ ] Security tests cover identified sensitive functions
-- [ ] Aggregate invariant tests cover root-in-invalid-state scenarios
-- [ ] Database migrations are idempotent
-- [ ] No regressions in existing tests
-```
+Read the [FEATURE.md Template](patterns.md#feature-md-template) pattern in patterns.md when writing this.
 
 After writing FEATURE.md, invoke the `go-architect` agent to produce TASKS.md and individual task files:
 
@@ -193,22 +134,7 @@ When invoked by go-runner during a `SPEC_DISPUTE`, you are arbitrating a disagre
 4. **Update `.plan/<feature-slug>/FEATURE.md`** if the spec needs correction.
 5. **Invoke go-architect** with `subagent_type: go-architect` to produce corrective task files:
 
-```
-Launch Agent with subagent_type: go-architect and prompt:
-A spec dispute was resolved for feature <feature-slug>.
-
-# Ruling
-<your ruling and reasoning>
-
-# Updated Spec
-<relevant section of updated FEATURE.md>
-
-Read .plan/<feature-slug>/TASKS.md and create corrective tasks:
-- If tests need rewriting: create a new red task for go-test-writer
-- If implementation needs retrying: create a new green task for go-dev with the clarification
-- Mark the disputed task as superseded in TASKS.md
-Append new tasks to .plan/<feature-slug>/TASKS.md.
-```
+Read the [Dispute Resolution Agent Prompt](patterns.md#dispute-resolution-agent-prompt) pattern in patterns.md when writing this.
 
 ### Principles
 

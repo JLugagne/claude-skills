@@ -24,81 +24,29 @@ Your task file specifies which test levels to write. Follow the task — don't a
 
 ### Unit Tests (App Layer)
 
-Use function-based mocks. Wire only the methods your test needs:
+Use function-based mocks. Wire only the methods your test needs.
 
-```go
-func TestApp_CreateXxx_Success(t *testing.T) {
-    ctx := context.Background()
-    mock := &xxxtest.MockXxxRepository{
-        CreateFunc: func(ctx context.Context, ...) error {
-            return nil
-        },
-    }
-    a := newAppWith(mock)
-    result, err := a.CreateXxx(ctx, ...)
-    require.NoError(t, err)
-    assert.Equal(t, expected, result.Field)
-}
-```
+Read the [Unit Test (App Layer)](patterns.md#unit-test-app-layer) pattern in patterns.md when writing this.
 
 ### Contract Tests (Repository Layer)
 
 Write inside the `XxxContractTesting` function in `domain/repositories/<entity>/<entity>test/contract.go`. These are reusable — called from both mock-based unit tests and real adapter tests.
 
-```go
-t.Run("Contract: Create stores and FindByID retrieves", func(t *testing.T) {
-    item := domain.Xxx{ID: domain.NewXxxID(), Field: "value"}
-    err := repo.Create(ctx, item)
-    require.NoError(t, err)
-    found, err := repo.FindByID(ctx, item.ID)
-    require.NoError(t, err)
-    assert.Equal(t, item.Field, found.Field)
-})
-
-t.Run("Contract: FindByID wrong scope returns error", func(t *testing.T) {
-    _, err := repo.FindByID(ctx, otherProjectID, item.ID)
-    require.Error(t, err)
-})
-```
+Read the [Contract Test (Repository Layer)](patterns.md#contract-test-repository) pattern in patterns.md when writing this.
 
 ### Repository Adapter Contract Tests
 
-At `internal/<context>/outbound/<adapter>/<entity>_contract_test.go`, write tests that run the contract functions against the **real adapter** using testcontainers:
+At `internal/<context>/outbound/<adapter>/<entity>_contract_test.go`, write tests that run the contract functions against the **real adapter** using testcontainers.
 
-```go
-func TestXxxRepositoryContract(t *testing.T) {
-    // Start testcontainer, run migrations, get real pool
-    pool := setupTestDB(t)
-    repo := NewXxxRepository(pool)
-
-    // Run the shared contract tests against the real adapter
-    xxxtest.XxxContractTesting(t, repo, setupProject)
-}
-```
+Read the [Repository Adapter Contract Test](patterns.md#repository-adapter-contract-test) pattern in patterns.md when writing this.
 
 This proves the adapter satisfies the port interface against real infrastructure — not just against mocks.
 
 ### App Service Contract Tests
 
-At `internal/<context>/app/<entity>_contract_test.go`, write tests that run the app service against **real repositories** (testcontainers):
+At `internal/<context>/app/<entity>_contract_test.go`, write tests that run the app service against **real repositories** (testcontainers).
 
-```go
-func TestAppXxxContract(t *testing.T) {
-    pool := setupTestDB(t)
-    projectRepo := pg.NewProjectRepository(pool)
-    xxxRepo := pg.NewXxxRepository(pool)
-    a := app.New(projectRepo, xxxRepo)
-
-    // Test full use cases: app → repo → db → app
-    t.Run("CreateXxx persists and can be retrieved", func(t *testing.T) {
-        result, err := a.CreateXxx(ctx, projectID, "test")
-        require.NoError(t, err)
-        found, err := a.GetXxx(ctx, projectID, result.ID)
-        require.NoError(t, err)
-        assert.Equal(t, "test", found.Name)
-    })
-}
-```
+Read the [App Service Contract Test](patterns.md#app-service-contract-test) pattern in patterns.md when writing this.
 
 This tests the full app → repo → infrastructure flow without HTTP/gRPC — catching integration bugs that unit tests with mocks miss.
 
@@ -106,45 +54,7 @@ This tests the full app → repo → infrastructure flow without HTTP/gRPC — c
 
 E2E tests run against real infrastructure via testcontainers. The test setup creates containers for all external dependencies (database, message queue, cache), runs migrations, seeds test data, and wires the full stack. This proves the entire pipeline works — migrations, queries, constraints, indexes, IDOR protection — not just mocked behavior.
 
-```go
-func TestMain(m *testing.M) {
-    ctx := context.Background()
-
-    // Start testcontainers for all external dependencies
-    // Use the appropriate testcontainers module for your infrastructure:
-    //   postgres: tcpostgres.Run(ctx, "postgres:17", ...)
-    //   redis:    tcredis.Run(ctx, "redis:7", ...)
-    //   rabbitmq: tcrabbitmq.Run(ctx, "rabbitmq:3-management", ...)
-    //   kafka:    tckafka.Run(ctx, "confluentinc/cp-kafka:7.5.0", ...)
-    //   mongo:    tcmongo.Run(ctx, "mongo:7", ...)
-    container, err := startTestContainer(ctx)
-    if err != nil {
-        log.Fatalf("testcontainer: %v", err)
-    }
-
-    // Connect, run migrations, seed data
-    client := connectToContainer(ctx, container)
-    runMigrations(client)
-    seedTestData(client)
-
-    // Build and start the HTTP server with real repos (not mocks)
-    testServer = setupServer(client)
-
-    code := m.Run()
-    testServer.Close()
-    client.Close()
-    container.Terminate(ctx)
-    os.Exit(code)
-}
-
-func seedTestData(client interface{}) {
-    // Seed at least:
-    // - 2 scopes/tenants (for IDOR testing)
-    // - Multiple entities in scope A (for list/filter/search)
-    // - At least 1 entity in scope B (for cross-scope isolation)
-    // Use fixed IDs for deterministic assertions
-}
-```
+Read the [E2E Test Setup (TestMain + Seed)](patterns.md#e2e-test-setup) pattern in patterns.md when writing this.
 
 The key principle: **seed the datastore with known data**, then test the endpoints against it. This catches migration issues, query bugs, constraint violations, and index problems that mock-based tests miss.
 

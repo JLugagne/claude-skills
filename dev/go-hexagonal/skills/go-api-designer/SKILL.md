@@ -20,64 +20,13 @@ Read the current codebase to understand:
 
 For each endpoint, define:
 
-```
-### [METHOD] /api/v1/[resource]
-
-**Purpose:** [what it does]
-
-**Request:**
-- Path params: [param: type — validation]
-- Query params: [param: type — default — validation]
-- Body (JSON):
-  ```json
-  {
-    "field": "type — constraints"
-  }
-  ```
-
-**Response 200:**
-```json
-{
-  "field": "type"
-}
-```
-
-**Error Responses:**
-- 400: [validation error conditions]
-- 401: [auth required]
-- 403: [insufficient permissions]
-- 404: [resource not found]
-- 409: [conflict conditions]
-- 422: [business rule violations]
-
-**Validation Rules:**
-- field: [min/max length, format, required/optional]
-```
+Read the [Endpoint Definition Template](patterns.md#endpoint-definition-template) pattern in patterns.md when writing this.
 
 ### Step 3: Design Request/Response Types
 
 Define Go types for the `pkg/<context>/` package:
 
-```go
-type CreateXxxRequest struct {
-    Name        string `json:"name"`
-    Description string `json:"description,omitempty"`
-}
-
-type XxxResponse struct {
-    ID          string `json:"id"`
-    Name        string `json:"name"`
-    Description string `json:"description"`
-    CreatedAt   string `json:"created_at"`
-}
-
-type XxxListResponse struct {
-    Items      []XxxResponse `json:"items"`
-    Total      int           `json:"total"`
-    Limit      int           `json:"limit"`
-    Offset     int           `json:"offset"`
-}
-```
+Read the [Request/Response Types](patterns.md#request-response-types) pattern in patterns.md when writing this.
 
 ### Step 4: Define Validation
 
@@ -107,15 +56,7 @@ Create tasks for:
 
 ## Error Response Format
 
-Follow existing codebase conventions. Errors should include:
-```json
-{
-  "error": {
-    "code": "DOMAIN_ERROR_CODE",
-    "message": "Human readable message"
-  }
-}
-```
+Follow existing codebase conventions. Read the [Error Response Format](patterns.md#error-response-format) pattern in patterns.md when writing this.
 
 ## Summary Output
 

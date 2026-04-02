@@ -12,16 +12,7 @@ Guide completion of a feature after the full pipeline has run. Verify everything
 
 **Before presenting options, run the full verification suite:**
 
-```bash
-# Build
-go build ./...
-
-# Full test suite with race detection
-go test ./... -count=1 -race
-
-# Check for any skipped tests (leftover TODOs from scaffolding)
-go test ./... -count=1 -v 2>&1 | grep -c "SKIP"
-```
+Read the [Verification Commands](patterns.md#verification-commands) pattern in patterns.md when running this.
 
 **If anything fails:** Stop. Do not proceed. Report the failure and suggest whether go-fixer or go-debugger is appropriate.
 
@@ -31,16 +22,7 @@ go test ./... -count=1 -v 2>&1 | grep -c "SKIP"
 
 Read `.plan/<feature-slug>/FEATURE.md` and check every item in "Definition of Done":
 
-```
-## Acceptance Criteria Verification
-
-- [x] All tests pass (go test ./... — evidence above)
-- [x] Project compiles (go build ./... — evidence above)
-- [x] E2E tests cover happy path and error cases (TestXxx_E2E_*)
-- [x] Security tests cover IDOR and validation (TestXxx_WrongProject_*)
-- [ ] Database migrations are idempotent (NEEDS VERIFICATION)
-...
-```
+Read the [Acceptance Criteria Check](patterns.md#acceptance-criteria-check) pattern in patterns.md when writing this.
 
 For each item: either point to evidence (test name, command output) or flag it as unverified.
 
@@ -48,21 +30,7 @@ For each item: either point to evidence (test name, command output) or flag it a
 
 Read all `.plan/<feature-slug>/task-*_SUMMARY.md` files and `.plan/<feature-slug>/task-rev-*` (reviewer task files) to produce a concise report:
 
-```
-## Feature Summary: <feature-slug>
-
-### What was built
-[2-3 sentences]
-
-### Files created/modified
-[List from task summaries — deduplicated]
-
-### Review findings addressed
-[From go-reviewer tasks — what was caught and fixed]
-
-### Open items (if any)
-[Anything deferred or flagged during the pipeline]
-```
+Read the [Review Summary Report](patterns.md#review-summary-report) pattern in patterns.md when writing this.
 
 ### Step 4: Plan Artifacts Cleanup
 
@@ -74,58 +42,22 @@ Ask: "Should I archive the .plan/<feature-slug>/ directory?"
 
 ### Step 5: Present Integration Options
 
-```
-Feature complete and verified. What would you like to do?
-
-1. Merge to main/master locally
-2. Push and create a Pull Request
-3. Keep the branch as-is
-4. Discard this work
-```
+Read the [Integration Options](patterns.md#integration-options) pattern in patterns.md when presenting this.
 
 ### Step 6: Execute Choice
 
 #### Option 1: Merge Locally
-```bash
-git checkout main
-git pull
-git merge <feature-branch>
-# Re-run tests on merged result
-go test ./... -count=1 -race
-git branch -d <feature-branch>
-```
+Read the [Merge Locally](patterns.md#merge-locally) pattern in patterns.md when executing this.
 
 #### Option 2: Push and Create PR
-```bash
-git push -u origin <feature-branch>
-gh pr create --title "feat: <feature-slug>" --body "$(cat <<'EOF'
-## Summary
-[From Step 3 report]
-
-## Test Plan
-- All unit, contract, and e2e tests pass with -race
-- Acceptance criteria verified against FEATURE.md
-- go-reviewer findings addressed
-
-## Review Notes
-[From go-reviewer report]
-EOF
-)"
-```
+Read the [Push and Create PR](patterns.md#push-and-create-pr) pattern in patterns.md when executing this.
 
 #### Option 3: Keep As-Is
 Report: "Branch preserved. Plan artifacts at `.plan/<feature-slug>/`."
 
 #### Option 4: Discard
-**Require typed confirmation:**
-```
-This will permanently delete:
-- Branch: <name>
-- Commits: <list>
-- Plan artifacts: .plan/<feature-slug>/
-
-Type 'discard' to confirm.
-```
+**Require typed confirmation.**
+Read the [Discard Confirmation](patterns.md#discard-confirmation) pattern in patterns.md when presenting this.
 
 ## Red Flags
 

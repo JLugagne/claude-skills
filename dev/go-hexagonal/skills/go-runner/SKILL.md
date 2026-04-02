@@ -25,6 +25,15 @@ A task is executable when status is `pending` and all dependencies are `done`.
 
 Run independent tasks in parallel when they touch different files and are the same phase type.
 
+### Step 2b: Pre-Green Guardrail (green tasks only)
+
+Before dispatching any green task, run a fast consistency check using a Haiku subagent. Read the [Pre-Green Guardrail Prompt](prompts.md#pre-green-guardrail-prompt) in prompts.md for the dispatch template.
+
+- If PASS → proceed to dispatch
+- If MISMATCH → flag as potential SPEC_DISPUTE before spending tokens on go-dev. Write the mismatch to the task summary and dispatch go-pm for early arbitration.
+
+This guardrail catches spec inconsistencies BEFORE burning tokens on implementation. It costs ~1% of a go-dev invocation.
+
 ### Step 3: Dispatch Subagent
 
 For each executable task:
@@ -32,29 +41,9 @@ For each executable task:
 1. Read `.plan/<feature-slug>/task-<id>.md` for the task details
 2. Read each dependency's `.plan/<feature-slug>/task-<dep>_SUMMARY.md` for context
 
-Launch an Agent with:
+Read the [Subagent Dispatch Prompt](prompts.md#subagent-dispatch-prompt) in prompts.md for the dispatch template.
 
-```
-You are working on a Go project following hexagonal architecture with red-green TDD.
-
-# Your Task
-<content of .plan/<feature-slug>/task-<id>.md>
-
-# Context from Previous Tasks
-<content of each dependency's task-<dep>_SUMMARY.md>
-
-# Skill
-Use subagent_type: <skill-name>
-
-# Output
-Return ONLY a short summary:
-- Files created/modified
-- What was done (1-3 sentences)
-- Any issues or blockers
-If you hit a circuit breaker, start with CIRCUIT_BREAK:
-```
-
-**Use `subagent_type` to dispatch.** The agent framework loads the skill automatically — no need to read and inline SKILL.md files. This is the key difference from the old orchestrator: zero skill-inlining overhead.
+**Use `subagent_type` to dispatch.** The agent framework loads the skill automatically — no need to read and inline SKILL.md files.
 
 Skill mapping from task files:
 - `go-scaffolder` → subagent_type: `go-scaffolder`
@@ -114,6 +103,15 @@ Do NOT mark a task as done based on:
 The full suite with `-race` and `-count=1` is the minimum. Report actual output
 in the task summary.
 
+## Post-Green Quick Eval (after each green task)
+
+After verification passes, run a fast Haiku eval to catch obvious issues early. Read the [Post-Green Eval Prompt](prompts.md#post-green-eval-prompt) in prompts.md for the dispatch template.
+
+- If CLEAN → mark task as done, proceed
+- If ISSUE → log the issue in the task summary. Create a note for go-reviewer to prioritize this area. Do NOT block — the full review will address it, but the early signal helps.
+
+This eval costs ~2% of a go-dev invocation and catches the most common security/architecture bugs immediately rather than waiting for the full review pass.
+
 After ALL tasks complete, invoke go-finish to handle feature closure.
 Do NOT present integration options yourself — go-finish handles verification,
 acceptance criteria, cleanup, and integration choice.
@@ -124,23 +122,7 @@ When go-dev returns `SPEC_DISPUTE:`:
 
 1. Write to `.plan/<feature-slug>/task-<id>_SUMMARY.md` with status `spec_dispute`
 2. **Pause all dependent tasks** — do not proceed past a disputed task's dependents
-3. Dispatch go-pm with `subagent_type: go-pm` and this prompt:
-
-```
-A spec dispute has been raised during implementation of feature <feature-slug>.
-
-# Dispute
-<content of the SPEC_DISPUTE summary from go-dev>
-
-# Context
-<content of .plan/<feature-slug>/FEATURE.md>
-<content of the disputed task file>
-
-Review the dispute. Decide whether the test expectation or the developer's concern is correct.
-Update .plan/<feature-slug>/FEATURE.md if the spec needs correction.
-Then invoke go-architect to create corrective tasks (new red-green pairs, modified tasks, or task deletions).
-```
-
+3. Dispatch go-pm with `subagent_type: go-pm`. Read the [Spec Dispute Escalation Prompt](prompts.md#spec-dispute-escalation-prompt) in prompts.md for the dispatch template.
 4. After go-pm + go-architect produce corrective tasks, re-read `.plan/<feature-slug>/TASKS.md` to pick up the new/modified tasks
 5. Resume execution from the corrective tasks
 
@@ -172,8 +154,18 @@ One line per task:
 ```
 [task-3/12] DONE (green) — Implemented XxxRepository, all tests passing
 [task-4/12] BLOCKED (green) — Tests still failing after fix attempt
-[task-5/12] SPEC_DISPUTE (green) — Dev disagrees with test expectation, escalating to go-pm
+[task-5/12] SPEC_DISPUTE (green) — Escalating to go-pm
 ```
+
+## Parallel Execution & Isolation
+
+When dispatching multiple tasks in parallel (e.g., red tasks after scaffold), check whether they touch overlapping files. If tasks modify the same files, run them sequentially. If they are independent:
+
+- **Red tasks writing to different `_test.go` files**: safe to parallelize directly.
+- **Green tasks modifying shared files (init.go, config.go)**: run sequentially to avoid write conflicts.
+- **Tasks that might conflict**: use `isolation: "worktree"` when dispatching the Agent to give each task an isolated copy of the repo. The worktree is cleaned up automatically if no changes are made.
+
+The go-architect's task files include a "Files to Create/Modify" section — use this to determine overlap before deciding parallel vs sequential.
 
 ## Guidelines
 

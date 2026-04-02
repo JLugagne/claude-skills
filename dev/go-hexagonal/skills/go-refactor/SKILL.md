@@ -25,68 +25,20 @@ Before touching any code, produce a complete inventory of every way the system r
 For each inbound surface, create `.refactor/<surface>.md`:
 
 #### HTTP Endpoints
-```markdown
-# HTTP Surface: <context>
 
-## Endpoints
-
-### GET /api/v1/projects/{projectID}/notifications
-- **Request**: path param `projectID` (UUID), query param `read` (optional bool)
-- **Response 200**: `{"items": [NotificationResponse], "total": int}`
-- **Response 400**: `{"error": {"code": "INVALID_PROJECT_ID", "message": "..."}}`
-- **Response 404**: `{"error": {"code": "PROJECT_NOT_FOUND", "message": "..."}}`
-- **Consumes**: projectID (UUID string)
-- **Produces**: NotificationResponse {id, project_id, type, message, read, created_at}
-
-### POST /api/v1/projects/{projectID}/notifications
-- **Request**: `{"type": "project_created|project_updated|project_archived", "message": "1-500 chars"}`
-- **Response 201**: NotificationResponse
-- **Response 400**: INVALID_NOTIFICATION_TYPE, INVALID_MESSAGE
-- **Consumes**: CreateNotificationRequest {type, message}
-- **Produces**: NotificationResponse
-```
+Read the [HTTP Surface Documentation](patterns.md#http-surface-doc) pattern in patterns.md when writing this.
 
 #### gRPC Services
-```markdown
-# gRPC Surface: <service>
 
-## RPCs
-
-### CreateNotification(CreateNotificationRequest) → CreateNotificationResponse
-- **Request fields**: project_id (string/UUID), type (enum), message (string 1-500)
-- **Response fields**: notification (Notification message)
-- **Error codes**: INVALID_ARGUMENT, NOT_FOUND
-- **Consumes**: CreateNotificationRequest protobuf
-- **Produces**: CreateNotificationResponse protobuf
-```
+Read the [gRPC Surface Documentation](patterns.md#grpc-surface-doc) pattern in patterns.md when writing this.
 
 #### Message Queue Consumers
-```markdown
-# Queue Surface: <queue/topic>
 
-## Consumers
-
-### project.events (RabbitMQ / Kafka / NATS)
-- **Binding/Topic**: project.events.created, project.events.updated, project.events.archived
-- **Message schema**: {"project_id": "UUID", "event_type": "string", "timestamp": "RFC3339"}
-- **Side effects**: Creates a Notification entity in the database
-- **Consumes**: ProjectEvent JSON
-- **Produces**: Notification (in database)
-- **Idempotency**: keyed on (project_id, event_type, timestamp) — duplicate messages must not create duplicate notifications
-```
+Read the [Queue Surface Documentation](patterns.md#queue-surface-doc) pattern in patterns.md when writing this.
 
 #### Scheduled Jobs / Cron
-```markdown
-# Cron Surface: <job>
 
-## Jobs
-
-### cleanup-old-notifications (runs daily)
-- **Trigger**: cron schedule
-- **Side effects**: Deletes notifications older than 90 days
-- **Consumes**: nothing (time-based)
-- **Produces**: DELETE queries against notifications table
-```
+Read the [Cron Surface Documentation](patterns.md#cron-surface-doc) pattern in patterns.md when writing this.
 
 ### How to discover surfaces
 
@@ -98,27 +50,9 @@ For each inbound surface, create `.refactor/<surface>.md`:
 
 ### Gate: Phase 1 → Phase 2
 
-Create `.refactor/SURFACES.md` summarizing all surfaces found:
+Create `.refactor/SURFACES.md` summarizing all surfaces found.
 
-```markdown
-# Inbound Surfaces
-
-| Surface | Type | Endpoints/RPCs/Topics | File |
-|---------|------|----------------------|------|
-| HTTP API | http | 6 endpoints | .refactor/http.md |
-| Notification gRPC | grpc | 4 RPCs | .refactor/grpc.md |
-| Project Events | rabbitmq | 3 bindings | .refactor/queue-project-events.md |
-| Cleanup Job | cron | 1 job | .refactor/cron-cleanup.md |
-
-## Types Consumed (inputs)
-- CreateNotificationRequest {type, message}
-- ProjectEvent {project_id, event_type, timestamp}
-- ...
-
-## Types Produced (outputs)
-- NotificationResponse {id, project_id, type, message, read, created_at}
-- ...
-```
+Read the [Surfaces Summary Template](patterns.md#surfaces-summary) pattern in patterns.md when writing this.
 
 **Ask the user to review** `.refactor/SURFACES.md` before proceeding. Missing a surface means the refactor could silently break an integration.
 
@@ -137,17 +71,9 @@ Create exhaustive e2e tests that exercise every documented surface. These tests 
 
 ### Test structure
 
-Create one test file per surface in `tests/e2e-refactor/`:
+Create one test file per surface in `tests/e2e-refactor/`.
 
-```
-tests/e2e-refactor/
-├── setup_test.go              # TestMain: testcontainers, migrations, seed, server
-├── http_test.go               # Every HTTP endpoint
-├── grpc_test.go               # Every gRPC RPC
-├── queue_test.go              # Every queue consumer (publish test message, assert side effect)
-├── cron_test.go               # Every cron job (trigger manually, assert side effect)
-└── types_test.go              # Type compatibility assertions
-```
+Read the [E2E Test Directory Structure](patterns.md#e2e-test-structure) pattern in patterns.md when writing this.
 
 #### HTTP tests
 For each endpoint documented in Phase 1:
@@ -170,44 +96,8 @@ For each consumer:
 - **Verify the message schema**: marshal a struct to JSON, publish it, verify the consumer accepts it
 
 #### Type compatibility tests
-```go
-// These tests ensure the refactor doesn't change the API contract.
-// They compare the actual types used by the system against the documented types.
 
-func TestHTTPResponseTypes(t *testing.T) {
-    // Make a real HTTP request
-    resp := env.get(t, "/api/v1/projects/"+projectID+"/notifications")
-
-    // Unmarshal into the EXACT response struct the API documents
-    var body struct {
-        Items []NotificationResponse `json:"items"`
-        Total int                    `json:"total"`
-    }
-    err := json.NewDecoder(resp.Body).Decode(&body)
-    require.NoError(t, err, "response must unmarshal into documented type")
-
-    // Assert every field is present and correctly typed
-    require.NotEmpty(t, body.Items)
-    item := body.Items[0]
-    assert.NotEmpty(t, item.ID, "id field must be present")
-    assert.NotEmpty(t, item.ProjectID, "project_id field must be present")
-    assert.NotEmpty(t, item.Type, "type field must be present")
-    assert.NotEmpty(t, item.Message, "message field must be present")
-    assert.NotNil(t, item.CreatedAt, "created_at field must be present")
-    // read is a bool — can be false, so just check it exists in the JSON
-}
-
-func TestGRPCResponseTypes(t *testing.T) {
-    // Make a real gRPC call
-    resp, err := client.GetNotification(ctx, &pb.GetNotificationRequest{...})
-    require.NoError(t, err)
-
-    // Assert the protobuf message has all documented fields populated
-    assert.NotEmpty(t, resp.Notification.Id)
-    assert.NotEmpty(t, resp.Notification.ProjectId)
-    // ...
-}
-```
+Read the [Type Compatibility Tests](patterns.md#type-compat-tests) pattern in patterns.md when writing this.
 
 ### Gate: Phase 2 → Phase 3
 
@@ -225,40 +115,7 @@ Now that behavior is locked, plan the refactor.
 
 ### Create `.refactor/REWRITE_PLAN.md`
 
-```markdown
-# Rewrite Plan
-
-## Goal
-[What the refactor achieves — e.g., "migrate from gorilla/mux to stdlib", "split monolith into bounded contexts"]
-
-## Constraints
-- All tests in tests/e2e-refactor/ must pass after the rewrite
-- No changes to any test file during the rewrite
-- No changes to API contracts (same request/response types, same status codes, same error codes)
-- No changes to message schemas (same JSON structure, same topic/binding names)
-- No changes to proto definitions (same message types, same field numbers)
-
-## Changes
-
-### Files to modify
-- [file] — [what changes and why]
-
-### Files to create
-- [file] — [purpose]
-
-### Files to delete
-- [file] — [why it's no longer needed]
-
-## Migration steps (ordered)
-1. [step] — [what changes, what tests should still pass]
-2. [step] — [incremental, verify tests after each step]
-
-## Verification
-After each step:
-1. `go build ./...`
-2. `go test ./tests/e2e-refactor/... -count=1 -v` — ALL tests pass
-3. `go test ./... -count=1` — no regressions
-```
+Read the [Rewrite Plan Template](patterns.md#rewrite-plan) pattern in patterns.md when writing this.
 
 ### Execute the rewrite
 

@@ -8,66 +8,20 @@ You design the implementation plan for a feature. You read `.plan/<feature-slug>
 
 ## Architecture: Hexagonal (Ports & Adapters)
 
-The codebase follows this structure per bounded context:
-
-```
-internal/<context>/
-    domain/                          # Models, typed IDs, domain errors, value objects
-    domain/repositories/<entity>/    # PORT interfaces (repository contracts)
-    domain/repositories/<entity>/<entity>test/  # Mock + contract test functions
-    domain/service/                  # Domain service interfaces (if needed)
-    domain/uow/                      # Unit of Work interface (transaction boundary)
-    app/                             # Application services (orchestration layer)
-    inbound/converters/              # Request/response type converters, validation
-    inbound/handlers/                # HTTP/MCP/WS handlers (driving adapters)
-    outbound/<adapter>/              # Database/queue/cache implementations (driven adapters)
-    outbound/<adapter>/migrations/   # Numbered migration files (if applicable)
-```
+Read the [Hexagonal Directory Structure](patterns.md#hexagonal-directory-structure) pattern in patterns.md when creating this.
 
 ## Unit of Work Pattern
 
 When an app service operation must modify multiple repositories atomically (e.g., create an entity AND publish an event AND update a counter), use the Unit of Work pattern instead of passing raw transactions through the app layer.
 
-The UoW interface lives in the domain layer (it's a port):
-
-```go
-// domain/uow/uow.go
-type UnitOfWork interface {
-    // Do executes fn inside a transaction. If fn returns an error, the transaction
-    // is rolled back. If fn returns nil, the transaction is committed.
-    // The fn receives a scoped provider that gives access to transactional repositories.
-    Do(ctx context.Context, fn func(ctx context.Context, repos Repositories) error) error
-}
-
-// Repositories provides access to all repositories within the transaction scope.
-// Each repository returned here operates within the same transaction.
-type Repositories interface {
-    Notifications() notification.NotificationRepository
-    Projects() project.ProjectRepository
-    // Add more as needed
-}
-```
+The UoW interface lives in the domain layer (it's a port). Read the [Unit of Work Interface](patterns.md#unit-of-work-interface) pattern in patterns.md when creating this.
 
 The outbound adapter implements UoW using the database driver's transaction support:
 - SQL: `BEGIN` / `COMMIT` / `ROLLBACK`
 - MongoDB: `session.WithTransaction()`
 - Multi-store: saga/outbox pattern
 
-The app service uses it like this:
-```go
-func (a *App) TransferOwnership(ctx context.Context, projectID, newOwnerID types.ID) error {
-    return a.uow.Do(ctx, func(ctx context.Context, repos uow.Repositories) error {
-        project, err := repos.Projects().FindByID(ctx, projectID)
-        if err != nil { return err }
-        project.OwnerID = newOwnerID
-        if err := repos.Projects().Update(ctx, project); err != nil { return err }
-        return repos.Notifications().Create(ctx, projectID, domain.Notification{
-            Type: domain.NotificationTypeOwnerChanged,
-            Message: "Project ownership transferred",
-        })
-    })
-}
-```
+Read the [Unit of Work App Service Usage](patterns.md#unit-of-work-app-service-usage) pattern in patterns.md when implementing this.
 
 **When to use UoW:** When a single user action must atomically modify data across multiple repositories. If the operation only touches one repository, a simple repo method call is sufficient — don't add UoW overhead for single-repo operations.
 
@@ -117,40 +71,7 @@ ADRs are skills so that future agents can be guided by past decisions when they 
 **To create or update an ADR:**
 
 1. Check existing ADRs: look in `.claude/skills/adr-*/SKILL.md` and find the highest number.
-2. For each decision, write `.claude/skills/adr-NNN/SKILL.md`:
-
-```markdown
----
-name: adr-NNN-<slug>
-description: <When to trigger — describe the contexts where this decision is relevant. Be specific: mention entity names, patterns, technologies, and scenarios so the ADR activates when a future agent works on related code.>
-invoke: agent
-trigger: description
----
-
-# ADR-NNN: <Decision Title>
-
-## Status
-Accepted
-
-## Context
-<What problem or question prompted this decision? What constraints existed?>
-
-## Decision
-<What was decided and why? Include the reasoning, not just the conclusion.>
-
-## Alternatives Considered
-- <Alternative 1>: <why rejected>
-- <Alternative 2>: <why rejected>
-
-## Consequences
-- <What this decision enables>
-- <What this decision constrains — future work that must follow this pattern>
-- <What to watch out for>
-
-## Applies To
-- <List of file patterns, packages, or domains where this decision applies>
-```
-
+2. For each decision, write `.claude/skills/adr-NNN/SKILL.md` following the ADR template. Read the [ADR Skill Template](patterns.md#adr-skill-template) pattern in patterns.md when creating this.
 3. Register the ADR in `.claude/settings.json` under the `skills` key so it's discoverable.
 
 **Examples of decisions that warrant ADRs:**
@@ -168,81 +89,11 @@ The `trigger: description` setting means the ADR activates based on its descript
 
 ### Step 3: Write TASKS.md
 
-Write `.plan/<feature-slug>/TASKS.md` with this structure:
-
-```markdown
-# Tasks for Feature: [Name]
-
-## File Manifest
-
-### Files to CREATE
-- path/to/file.go — [purpose]
-
-### Files to UPDATE
-- path/to/file.go — [what changes and why]
-
-### Files to DELETE
-- path/to/file.go — [why]
-
-## Task List
-
-| ID | Title | Skill | Phase | Depends On | Status |
-|----|-------|-------|-------|------------|--------|
-| task-1 | Scaffold all stubs and interfaces | go-scaffolder | scaffold | — | pending |
-| task-2 | [ADVISOR] Review architecture and security | go-reviewer | advisor | task-1 | pending |
-| task-3 | [RED] Contract tests for XxxRepository | go-test-writer | red | task-1 | pending |
-| task-4 | [GREEN] Implement XxxRepository | go-dev | green | task-3 | pending |
-| task-5 | [RED] App layer tests for XxxService | go-test-writer | red | task-4 | pending |
-| task-6 | [GREEN] Implement XxxService | go-dev | green | task-5 | pending |
-| task-7 | [RED] Converter tests | go-test-writer | red | task-1 | pending |
-| task-8 | [GREEN] Implement converters | go-dev | green | task-7 | pending |
-| task-9 | [RED] E2E API tests | go-test-writer | red | task-6,task-8 | pending |
-| task-10 | [GREEN] Implement HTTP handlers | go-dev | green | task-9 | pending |
-| task-11 | [ADVISOR] Review queries, indexes, and data layer | go-reviewer | advisor | task-4,task-10 | pending |
-| task-12 | [MIGRATION] Data migration (if needed) | go-migrator | migration | task-4 | pending |
-```
+Write `.plan/<feature-slug>/TASKS.md`. Read the [TASKS.md Template](patterns.md#tasksmd-template) pattern in patterns.md when creating this.
 
 ### Step 4: Write Individual Task Files
 
-For each task, write `.plan/<feature-slug>/task-<id>.md`:
-
-```markdown
-# task-<id>: [Title]
-
-## Skill: [go-scaffolder|go-test-writer|go-dev|go-reviewer|go-fixer|go-migrator]
-## Phase: [scaffold|red|green|advisor]
-## Depends On: [task-X, task-Y]
-
-## Relevant Code Files
-
-List every file the subagent needs to read to do this task:
-
-- `internal/server/domain/models.go` — existing domain types (read for context)
-- `internal/server/domain/repositories/comments/comments.go` — similar repository interface pattern
-- `internal/server/domain/repositories/comments/commentstest/contract.go` — similar mock/contract pattern
-
-## Parent Task Summaries
-
-> Read these summaries from completed dependency tasks for context:
-> - `.plan/<feature-slug>/task-<dep-id>_SUMMARY.md`
-
-## Description
-
-[Detailed description of what the subagent must do]
-
-## Files to Create/Modify
-
-- `path/to/new_file.go` — CREATE: [what it contains]
-- `path/to/existing.go` — MODIFY: [what to add/change]
-
-## Acceptance Criteria
-
-- [ ] [Specific, verifiable criterion]
-- [ ] `go build ./...` passes
-- [ ] [For red: tests compile but FAIL]
-- [ ] [For green: all previously-red tests PASS]
-- [ ] [For scaffold: all tests PASS or SKIP]
-```
+For each task, write `.plan/<feature-slug>/task-<id>.md`. Read the [Individual Task File Template](patterns.md#individual-task-file-template) pattern in patterns.md when creating this.
 
 ### Step 5: Invoke Advisors via Task Files
 
@@ -271,41 +122,18 @@ Review tasks may produce NEW task files appended to `.plan/<feature-slug>/TASKS.
 7. **E2E API tests** at the end — these are the most important quality gate
 8. **Data review** runs after all green tasks that touch the data layer (databases, queues, caches)
 
+## Parallel Safety
+
+The runner dispatches independent tasks in parallel for speed. To make this safe:
+
+- **Red tasks that write to different `_test.go` files** can run in parallel — design task file targets to be non-overlapping.
+- **Green tasks that modify shared files** (init.go, config.go, migrations) must be sequential — set dependencies accordingly.
+- In the "Files to Create/Modify" section of each task, list EVERY file the task will touch. The runner uses this to detect overlap and decide parallel vs sequential execution.
+- When two red tasks must create tests in the same package, split them into different test files (e.g., `xxx_unit_test.go` and `xxx_contract_test.go`) so they don't conflict.
+
 ## E2E Task File Template (mandatory)
 
-Every E2E test task file MUST include this verbatim in its Description section — the subagent needs explicit instructions because it won't have the skill context:
-
-```markdown
-## E2E Testing Requirements
-
-This task uses testcontainers to run tests against real infrastructure. Do NOT use mocks or in-memory implementations for e2e tests.
-
-### Setup pattern (in TestMain):
-1. Start testcontainers for all external dependencies (database, message queue, cache, etc.)
-2. Get connection strings and create client pools/connections
-3. Run ALL migrations/schema setup in order
-4. Seed test data: insert known entities with fixed IDs for deterministic assertions
-5. Build the real app with real repositories/clients (not mocks)
-6. Start an `httptest.Server` with the real router
-7. `t.Cleanup()` to close server, connections, and terminate containers
-
-### Required dependency:
-- `github.com/testcontainers/testcontainers-go` (plus the relevant modules for your infrastructure: postgres, redis, rabbitmq, kafka, etc.)
-
-### Seed data must include:
-- At least 2 scopes/tenants (for IDOR testing)
-- Multiple entities in scope A (for list/filter/search testing)
-- At least 1 entity in scope B (for cross-scope isolation testing)
-
-### Tests must cover:
-- Full CRUD lifecycle against real infrastructure
-- IDOR: access scope B's data from scope A's endpoint → 404
-- Search/filter with real data (proves indexes, full-text search, etc. work)
-- Empty results return `[]` not `null`
-- Error responses with structured JSON
-- Message queue integration (if applicable): verify messages are published/consumed
-- Cache behavior (if applicable): verify cache hits/misses/invalidation
-```
+Every E2E test task file MUST include the E2E testing requirements verbatim in its Description section — the subagent needs explicit instructions because it won't have the skill context. Read the [E2E Testing Requirements](patterns.md#e2e-testing-requirements) pattern in patterns.md when creating this.
 
 ## Task Content Requirements
 
@@ -318,20 +146,7 @@ Each `task-<id>.md` needs these sections (the subagent relies on them to do its 
 
 ## Security Constraints (include in every task file)
 
-Every task file MUST include this section verbatim — subagents only see their own task file, so security rules must be embedded in each one:
-
-```markdown
-## Security Constraints
-- Repository methods that operate on tenant/scope-scoped entities MUST include the scoping ID as a parameter (e.g., projectID, orgID, tenantID in FindByID, Update, Delete, etc.) — this prevents cross-tenant data access (IDOR).
-- Parameter order: broad to narrow — (scopeID, entityID) — never reversed. This keeps all repositories consistent.
-- Database queries MUST filter by both entity ID AND scope ID. Never query by entity ID alone.
-- Contract tests MUST include a "wrong scope" test: create in scope A, attempt access from scope B → must return not-found error.
-- Error responses MUST use structured JSON: `{"error":{"code":"...","message":"..."}}`. Never use http.Error() with plain text.
-- All user input MUST be validated: format validation for IDs, length limits for strings, type validation for enums.
-- Migration/schema DDL MUST be idempotent. Non-idempotent migrations fail on re-run.
-- Repository methods MUST distinguish "not found" from other database errors. Only map the driver's specific "no rows" error to domain not-found. Never collapse all DB errors into not-found — a timeout or connection error must propagate as a 500, not a 404.
-- E2E tests MUST use testcontainers (real database/queue/cache), NOT mocks. Seed the datastore with known data. This is the only way to prove migrations, queries, constraints, and indexes actually work.
-```
+Every task file MUST include the security constraints section verbatim — subagents only see their own task file, so security rules must be embedded in each one. Read the [Security Constraints](patterns.md#security-constraints) pattern in patterns.md when creating this.
 
 This is not optional. The scoping rule is the single most important security property — without it, any user can access any entity by guessing IDs. Bake it into the repository interface from the scaffold task onward.
 

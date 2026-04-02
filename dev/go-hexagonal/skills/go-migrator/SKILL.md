@@ -19,13 +19,7 @@ You write data migration scripts that modify existing data safely. Schema DDL (C
 ### Backfill
 Populate a new column from existing data or defaults.
 
-```sql
--- NNN_backfill_xxx_status.up.sql
--- Idempotent: only updates rows that haven't been migrated
-UPDATE xxx
-SET status = 'active'
-WHERE status IS NULL;
-```
+Read the [Backfill SQL](patterns.md#backfill-sql) pattern in patterns.md when writing this.
 
 ### Data Transform
 Change data format (e.g., normalize, split, merge).
@@ -35,34 +29,7 @@ Change data format (e.g., normalize, split, merge).
 -- Batch in application code, not raw SQL for large tables
 ```
 
-```go
-// internal/<context>/outbound/<adapter>/migrations/backfill_split_name.go
-func BackfillSplitName(ctx context.Context, pool *pgxpool.Pool) error {
-    const batchSize = 500
-    for {
-        result, err := pool.Exec(ctx, `
-            WITH batch AS (
-                SELECT id FROM users
-                WHERE first_name IS NULL AND full_name IS NOT NULL
-                LIMIT $1
-                FOR UPDATE SKIP LOCKED
-            )
-            UPDATE users u
-            SET first_name = split_part(u.full_name, ' ', 1),
-                last_name = split_part(u.full_name, ' ', 2)
-            FROM batch
-            WHERE u.id = batch.id
-        `, batchSize)
-        if err != nil {
-            return fmt.Errorf("backfill split name: %w", err)
-        }
-        if result.RowsAffected() == 0 {
-            break
-        }
-    }
-    return nil
-}
-```
+Read the [Batched Data Transform](patterns.md#batched-data-transform) pattern in patterns.md when writing this.
 
 ### Column/Table Move
 Move data between columns or tables as part of a schema evolution.
@@ -82,28 +49,7 @@ Understand what data needs to change, what the source and target look like, and 
 
 ### Step 3: Write the Test
 
-```go
-func TestMigration_NNN_BackfillXxxStatus(t *testing.T) {
-    pool := setupTestDB(t) // testcontainers
-
-    // Seed: insert rows in the OLD state
-    seedOldData(t, pool)
-
-    // Run the migration
-    err := runMigration(pool, "NNN_backfill_xxx_status")
-    require.NoError(t, err)
-
-    // Assert: rows are now in the NEW state
-    var count int
-    err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM xxx WHERE status IS NULL").Scan(&count)
-    require.NoError(t, err)
-    assert.Equal(t, 0, count, "all rows should have status after migration")
-
-    // Assert: idempotent — run again
-    err = runMigration(pool, "NNN_backfill_xxx_status")
-    require.NoError(t, err)
-}
-```
+Read the [Migration Test](patterns.md#migration-test) pattern in patterns.md when writing this.
 
 ### Step 4: Write the Rollback
 Every `.up.sql` has a `.down.sql`. For Go-based migrations, provide a rollback function.

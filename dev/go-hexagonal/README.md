@@ -35,6 +35,182 @@ go-brainstorm (Opus)    — explores problem space, proposes approaches, validat
 
 Opus plans and recovers. Sonnet executes. This split cuts cost by ~66% vs running everything on Opus.
 
+## Pipeline Flows
+
+### Happy Path (feature lifecycle)
+
+```
+ User describes feature
+       │
+       ▼
+ ┌─────────────┐
+ │ go-brainstorm│──── Explores problem, proposes 2-3 approaches
+ └──────┬──────┘
+        │ User approves direction
+        ▼
+ ┌─────────────┐
+ │   go-pm     │──── Interrogates spec (3-5 rounds), writes FEATURE.md
+ └──────┬──────┘
+        │ Spec is GREEN
+        ▼
+ ┌─────────────┐     ┌─────────────────┐
+ │ go-architect │────▶│ go-api-designer │ (if API endpoints)
+ └──────┬──────┘     └────────┬────────┘
+        │ Writes TASKS.md          │ Writes API_DESIGN.md
+        │◀─────────────────────────┘
+        ▼
+ ┌─────────────┐
+ │  go-runner  │──── Dispatches subagents, never writes code
+ └──────┬──────┘
+        │
+        ▼
+ ┌──────────────┐
+ │ go-scaffolder│──── Stubs, interfaces, mocks, skipped tests
+ └──────┬───────┘
+        │ go build ✓, go test all SKIP
+        ▼
+ ┌──────────────────────────────────────┐
+ │  PARALLEL: red tasks (3-5 at once)  │
+ │  ┌──────────────┐ ┌──────────────┐  │
+ │  │go-test-writer│ │go-test-writer│  │
+ │  │  (repo tests)│ │  (app tests) │  │
+ │  └──────┬───────┘ └──────┬───────┘  │
+ │         │ tests FAIL ✓    │          │
+ └─────────┼─────────────────┼──────────┘
+           ▼                 ▼
+ ┌──────────────────────────────────────┐
+ │  SEQUENTIAL: green tasks (deps)     │
+ │  ┌────────┐  ┌────────┐  ┌────────┐ │
+ │  │ go-dev │─▶│ go-dev │─▶│ go-dev │ │
+ │  │ (repo) │  │ (app)  │  │(handler│ │
+ │  └────┬───┘  └────┬───┘  └────┬───┘ │
+ │       │ tests PASS │ tests PASS│     │
+ └───────┼────────────┼───────────┼─────┘
+         ▼            ▼           ▼
+ ┌─────────────┐
+ │ go-reviewer │──── Architecture + security + data review
+ └──────┬──────┘
+        │ Creates fix tasks if needed
+        ▼
+ ┌─────────────┐
+ │  go-finish  │──── Final verification, acceptance criteria, integration
+ └──────┬──────┘
+        │
+        ▼
+ User chooses: merge / PR / keep / discard
+```
+
+### Error Recovery Flows
+
+```
+ ┌─────────────────────────────────────────────────────┐
+ │                 CIRCUIT BREAKER                      │
+ │                                                     │
+ │  Agent fails same way twice                         │
+ │       │                                             │
+ │       ▼                                             │
+ │  Returns CIRCUIT_BREAK:                             │
+ │       │                                             │
+ │       ▼                                             │
+ │  ┌──────────┐                                       │
+ │  │ go-fixer │──── Fresh eyes, no failed context     │
+ │  └────┬─────┘                                       │
+ │       │                                             │
+ │       ├── Fixed ✓ ──────▶ Resume pipeline           │
+ │       │                                             │
+ │       └── NEEDS_INVESTIGATION:                      │
+ │            │                                        │
+ │            ▼                                        │
+ │       ┌────────────┐                                │
+ │       │ go-debugger│──── 4-phase root cause         │
+ │       └─────┬──────┘                                │
+ │             │                                       │
+ │             ├── Fixed ✓ ──────▶ Resume pipeline     │
+ │             │                                       │
+ │             └── Escalates ──────▶ User decides      │
+ └─────────────────────────────────────────────────────┘
+
+ ┌─────────────────────────────────────────────────────┐
+ │                  SPEC DISPUTE                        │
+ │                                                     │
+ │  go-dev disagrees with test expectation             │
+ │       │                                             │
+ │       ▼                                             │
+ │  Returns SPEC_DISPUTE:                              │
+ │       │                                             │
+ │       ▼                                             │
+ │  ┌────────┐                                         │
+ │  │ go-pm  │──── Reviews spec, makes ruling          │
+ │  └───┬────┘                                         │
+ │      │                                              │
+ │      ├── Test correct ──▶ Clarify task, retry dev   │
+ │      │                                              │
+ │      ├── Dev correct ───▶ Update FEATURE.md         │
+ │      │                    │                         │
+ │      └── Spec gap ──────▶ Add missing spec          │
+ │                           │                         │
+ │                           ▼                         │
+ │                    ┌──────────────┐                  │
+ │                    │ go-architect │                  │
+ │                    └──────┬───────┘                  │
+ │                           │                         │
+ │                           ▼                         │
+ │                    Corrective tasks added            │
+ │                    to TASKS.md                       │
+ │                           │                         │
+ │                           ▼                         │
+ │                    Runner resumes                    │
+ └─────────────────────────────────────────────────────┘
+```
+
+### Guardrails & Verification
+
+```
+ ┌──────────────────────────────────────────┐
+ │  For each GREEN task:                    │
+ │                                          │
+ │  PRE-GREEN GUARDRAIL (Haiku, ~1% cost)  │
+ │  ┌───────────────────────┐               │
+ │  │ Check task vs spec    │               │
+ │  │ Check test alignment  │               │
+ │  │ Check file references │               │
+ │  └──────────┬────────────┘               │
+ │             │                            │
+ │     ┌──────┴──────┐                      │
+ │     │             │                      │
+ │   PASS        MISMATCH                   │
+ │     │         → early SPEC_DISPUTE       │
+ │     ▼                                    │
+ │  DISPATCH go-dev (Sonnet)                │
+ │     │                                    │
+ │     ▼                                    │
+ │  RUNNER VERIFICATION                     │
+ │  ┌───────────────────────┐               │
+ │  │ go build ./...        │               │
+ │  │ go test -count=1 -race│               │
+ │  └──────────┬────────────┘               │
+ │             │                            │
+ │     ┌──────┴──────┐                      │
+ │     │             │                      │
+ │   PASS          FAIL                     │
+ │     │           → mark blocked           │
+ │     ▼                                    │
+ │  POST-GREEN EVAL (Haiku, ~2% cost)      │
+ │  ┌───────────────────────┐               │
+ │  │ Check IDOR            │               │
+ │  │ Check layer violations│               │
+ │  │ Check error masking   │               │
+ │  └──────────┬────────────┘               │
+ │             │                            │
+ │     ┌──────┴──────┐                      │
+ │     │             │                      │
+ │   CLEAN        ISSUE                     │
+ │     │          → flag for reviewer       │
+ │     ▼                                    │
+ │   Task DONE ✓                            │
+ └──────────────────────────────────────────┘
+```
+
 ## Getting Started
 
 ### New project
@@ -114,3 +290,21 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 
 ### Context Chain
 Pass all dependency summaries (`.plan/<feature-slug>/task-N_SUMMARY.md`) when dispatching downstream tasks. Summaries carry the file manifest that the original task file doesn't know about.
+
+### Design Patterns (from literature)
+
+This pipeline implements patterns from Anthropic's "Building Effective Agents", OpenAI's Agents SDK, and Claude Code's multi-agent architecture:
+
+| Pattern | Implementation | Source |
+|---------|---------------|--------|
+| **Orchestrator-Workers** | go-runner dispatches specialized subagents, never writes code itself | Anthropic |
+| **Evaluator-Optimizer** | Post-green Haiku eval catches security/architecture issues after each task, before the full review | Anthropic |
+| **Input Guardrails** | Pre-green Haiku consistency check validates task-vs-spec alignment before burning tokens on go-dev | OpenAI Agents SDK |
+| **Model Routing** | Opus for planning/recovery, Sonnet for execution, Haiku for guardrails and eval | Both |
+| **Writer/Reviewer Separation** | go-test-writer writes tests, go-dev implements, go-reviewer reviews — each in fresh context, no self-bias | Claude Code best practices |
+| **Context Isolation** | Each subagent runs in its own context window, returns only a summary — main context stays clean | Claude Code sub-agents |
+| **Shared Task List** | TASKS.md is the coordination point — runner reads it, agents update it, reviewer appends to it | Claude Code agent teams |
+| **Deterministic Hooks** | PostToolUse hooks for auto-formatting, PreToolUse hooks for build checks — guaranteed, not advisory | Claude Code hooks |
+| **Worktree Isolation** | Parallel tasks that might conflict use `isolation: "worktree"` for safe concurrent execution | Claude Code worktrees |
+| **Spec Dispute Protocol** | SPEC_DISPUTE → go-pm arbitration → go-architect corrective tasks — pipeline self-heals | Custom (inspired by OpenAI guardrail tripwires) |
+| **Circuit Breaker + Escalation** | 2 failures → go-fixer (fresh eyes) → go-debugger (systematic investigation) → user | Anthropic's agent error recovery |

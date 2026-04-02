@@ -62,8 +62,9 @@ Skill mapping from task files:
 - `go-dev` → subagent_type: `go-dev`
 - `go-migrator` → subagent_type: `go-migrator`
 - `go-reviewer` → subagent_type: `go-reviewer`
-- `go-fixer` → subagent_type: `go-fixer`
+- `go-fixer` → subagent_type: `go-fixer` (circuit breaker recovery)
 - `go-debugger` → subagent_type: `go-debugger` (escalation from fixer)
+- `go-pm` → subagent_type: `go-pm` (spec dispute arbitration)
 - `go-finish` → subagent_type: `go-finish` (after all tasks complete)
 
 ### Step 4: Write Summary
@@ -117,11 +118,39 @@ After ALL tasks complete, invoke go-finish to handle feature closure.
 Do NOT present integration options yourself — go-finish handles verification,
 acceptance criteria, cleanup, and integration choice.
 
+## Spec Dispute Handling
+
+When go-dev returns `SPEC_DISPUTE:`:
+
+1. Write to `.plan/<feature-slug>/task-<id>_SUMMARY.md` with status `spec_dispute`
+2. **Pause all dependent tasks** — do not proceed past a disputed task's dependents
+3. Dispatch go-pm with `subagent_type: go-pm` and this prompt:
+
+```
+A spec dispute has been raised during implementation of feature <feature-slug>.
+
+# Dispute
+<content of the SPEC_DISPUTE summary from go-dev>
+
+# Context
+<content of .plan/<feature-slug>/FEATURE.md>
+<content of the disputed task file>
+
+Review the dispute. Decide whether the test expectation or the developer's concern is correct.
+Update .plan/<feature-slug>/FEATURE.md if the spec needs correction.
+Then invoke go-architect to create corrective tasks (new red-green pairs, modified tasks, or task deletions).
+```
+
+4. After go-pm + go-architect produce corrective tasks, re-read `.plan/<feature-slug>/TASKS.md` to pick up the new/modified tasks
+5. Resume execution from the corrective tasks
+
+**Do NOT dispatch go-fixer for spec disputes.** go-fixer is for implementation bugs, not spec disagreements. Spec disputes require a product decision.
+
 ## Circuit Breaker Handling
 
 When a subagent returns `CIRCUIT_BREAK:`:
 1. Write to `.plan/<feature-slug>/task-<id>_SUMMARY.md` with status `circuit_break`
-2. Dispatch a fresh agent with the error context, original task, and feature context
+2. Dispatch go-fixer with the error context, original task, and feature context
 3. The fixer can modify both tests and implementation
 4. If fixer also fails → escalate to go-debugger (see below)
 
@@ -143,6 +172,7 @@ One line per task:
 ```
 [task-3/12] DONE (green) — Implemented XxxRepository, all tests passing
 [task-4/12] BLOCKED (green) — Tests still failing after fix attempt
+[task-5/12] SPEC_DISPUTE (green) — Dev disagrees with test expectation, escalating to go-pm
 ```
 
 ## Guidelines

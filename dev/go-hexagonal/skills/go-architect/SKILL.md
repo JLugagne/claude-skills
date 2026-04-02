@@ -4,7 +4,7 @@ description: Designs implementation architecture following hexagonal patterns, p
 
 # Go Architect
 
-You design the implementation plan for a feature. You read `.plan/<feature-slug>/FEATURE.md` (written by go-pm), analyze the codebase, and produce `.plan/<feature-slug>/TASKS.md` plus individual `.plan/<feature-slug>/task-<id>.md` files that the go-orchestrator will execute.
+You design the implementation plan for a feature. You read `.plan/<feature-slug>/FEATURE.md` (written by go-pm), analyze the codebase, and produce `.plan/<feature-slug>/TASKS.md` plus individual `.plan/<feature-slug>/task-<id>.md` files that go-runner will execute.
 
 ## Architecture: Hexagonal (Ports & Adapters)
 
@@ -93,14 +93,13 @@ Read the relevant parts of the codebase to understand:
 If the feature spec includes API endpoints, invoke the `go-api-designer` agent to design the HTTP surface:
 
 ```
-Launch Agent with prompt:
+Launch Agent with subagent_type: go-api-designer and prompt:
 Read .plan/<feature-slug>/FEATURE.md and the existing codebase API patterns.
 Design all HTTP endpoints for this feature: routes, request/response types, validation rules, error codes.
 Write your API design to .plan/<feature-slug>/API_DESIGN.md.
-Follow the go-api-designer skill instructions.
 ```
 
-Include the content of `go-api-designer/SKILL.md` in the agent prompt so it follows the correct patterns.
+Use `subagent_type: go-api-designer` — the framework loads the skill automatically. Never inline SKILL.md files into agent prompts.
 
 The API design feeds into:
 - Scaffolding task (request/response type stubs)
@@ -190,18 +189,17 @@ Write `.plan/<feature-slug>/TASKS.md` with this structure:
 | ID | Title | Skill | Phase | Depends On | Status |
 |----|-------|-------|-------|------------|--------|
 | task-1 | Scaffold all stubs and interfaces | go-scaffolder | scaffold | — | pending |
-| task-2 | [ADVISOR] Review architecture | go-architect-advisor | advisor | task-1 | pending |
-| task-3 | [ADVISOR] Design database schema | go-reviewer | advisor | task-1 | pending |
-| task-4 | [ADVISOR] Security review and red-test planning | go-security-advisor | advisor | task-1 | pending |
-| task-5 | [RED] Contract tests for XxxRepository | go-qa | red | task-1 | pending |
-| task-6 | [GREEN] Implement XxxRepository | go-dev | green | task-5 | pending |
-| task-7 | [RED] App layer tests for XxxService | go-qa | red | task-6 | pending |
-| task-8 | [GREEN] Implement XxxService | go-dev | green | task-7 | pending |
-| task-9 | [RED] Converter tests | go-qa | red | task-1 | pending |
-| task-10 | [GREEN] Implement converters | go-dev | green | task-9 | pending |
-| task-11 | [RED] E2E API tests | go-e2e-qa | red | task-8,task-10 | pending |
-| task-12 | [GREEN] Implement HTTP handlers | go-http | green | task-11 | pending |
-| task-13 | [DBA] Review queries and indexes | go-postgres-dba | advisor | task-6,task-12 | pending |
+| task-2 | [ADVISOR] Review architecture and security | go-reviewer | advisor | task-1 | pending |
+| task-3 | [RED] Contract tests for XxxRepository | go-test-writer | red | task-1 | pending |
+| task-4 | [GREEN] Implement XxxRepository | go-dev | green | task-3 | pending |
+| task-5 | [RED] App layer tests for XxxService | go-test-writer | red | task-4 | pending |
+| task-6 | [GREEN] Implement XxxService | go-dev | green | task-5 | pending |
+| task-7 | [RED] Converter tests | go-test-writer | red | task-1 | pending |
+| task-8 | [GREEN] Implement converters | go-dev | green | task-7 | pending |
+| task-9 | [RED] E2E API tests | go-test-writer | red | task-6,task-8 | pending |
+| task-10 | [GREEN] Implement HTTP handlers | go-dev | green | task-9 | pending |
+| task-11 | [ADVISOR] Review queries, indexes, and data layer | go-reviewer | advisor | task-4,task-10 | pending |
+| task-12 | [MIGRATION] Data migration (if needed) | go-migrator | migration | task-4 | pending |
 ```
 
 ### Step 4: Write Individual Task Files
@@ -211,7 +209,7 @@ For each task, write `.plan/<feature-slug>/task-<id>.md`:
 ```markdown
 # task-<id>: [Title]
 
-## Skill: [go-scaffolder|go-test-writer|go-dev|go-reviewer|go-fixer]
+## Skill: [go-scaffolder|go-test-writer|go-dev|go-reviewer|go-fixer|go-migrator]
 ## Phase: [scaffold|red|green|advisor]
 ## Depends On: [task-X, task-Y]
 
@@ -358,7 +356,7 @@ The separation between QA and dev exists so tests are an independent specificati
 - QA (red) only touches `_test.go` and `*test/contract.go` — if the same agent writes tests and implementation, the tests tend to describe what was built rather than what should be built.
 - Dev (green) only touches implementation `.go` files — if dev "fixes" a test to match their implementation, the test loses its value as a contract.
 - Every red task has exactly one paired green task. This 1:1 pairing makes it clear which implementation satisfies which contract.
-- If dev disagrees with a test expectation, it blocks and describes the disagreement rather than silently changing behavior. The user decides who is right.
+- If dev disagrees with a test expectation, it returns `SPEC_DISPUTE:` and the runner escalates to go-pm for arbitration. go-pm reviews the spec, makes a ruling, and invokes go-architect to create corrective tasks. The pipeline self-heals without blocking on the user.
 
 ## Guidelines
 

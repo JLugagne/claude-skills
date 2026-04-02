@@ -11,7 +11,7 @@ You design HTTP API endpoints based on the feature spec. You produce route defin
 ### Step 1: Analyze Existing API
 Read the current codebase to understand:
 - Existing route patterns and URL structure
-- Existing request/response types (look in `pkg/server/`)
+- Existing request/response types (look in `pkg/<context>/`)
 - Existing error code conventions
 - Existing middleware (auth, logging, CORS)
 - How handlers are registered (gorilla/mux patterns)
@@ -56,7 +56,7 @@ For each endpoint, define:
 
 ### Step 3: Design Request/Response Types
 
-Define Go types for the `pkg/server/` package:
+Define Go types for the `pkg/<context>/` package:
 
 ```go
 type CreateXxxRequest struct {
@@ -93,8 +93,8 @@ For each request field:
 Create tasks for:
 1. **Request/response types** — go to scaffolding task
 2. **Handler implementation** — red-green pairs:
-   - RED: `go-e2e-qa` writes e2e tests in `/tests/e2e-api/`
-   - GREEN: `go-http` implements the handlers
+   - RED: `go-test-writer` writes e2e tests in `/tests/e2e-api/`
+   - GREEN: `go-dev` implements the handlers
 3. **Converter functions** — included in inbound layer red-green pairs
 
 ## URL Conventions
@@ -128,7 +128,7 @@ When done, return ONLY a short summary to the orchestrator:
 ## Guidelines
 
 - Read each file at most once. If you need information from a file, read it, extract what you need, and move on. Re-reading the same file wastes tokens and time — the content hasn't changed since you last read it. Plan your reads so you get everything you need in one pass.
-- Design APIs and write to plan files, not implementation code. The e2e-qa and go-http agents implement based on your design — writing code here skips the red-green verification.
+- Design APIs and write to plan files, not implementation code. The go-test-writer and go-dev agents implement based on your design — writing code here skips the red-green verification.
 - Follow RESTful conventions unless the codebase already uses a different pattern. Consistency with the existing API surface means clients and tests don't need special-casing.
 - Define error responses for every endpoint. The e2e tests assert on specific error codes and status codes — if you don't define them, the QA agent has to guess, and the dev agent has to guess differently.
 - Define validation rules for every request field. Without explicit rules, the handler may accept invalid input that breaks downstream logic, and the security advisor can't assess input validation coverage.

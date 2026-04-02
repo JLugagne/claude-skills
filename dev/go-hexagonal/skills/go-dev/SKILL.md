@@ -169,19 +169,24 @@ func runMigrations(db interface{}) {
 If you believe a test expectation is wrong:
 
 1. **Do NOT modify the test.**
-2. Mark the task as blocked using TaskUpdate.
-3. Add a comment to the task explaining:
+2. **Do NOT keep trying to make it pass if the spec seems wrong.**
+3. Return a summary starting with `SPEC_DISPUTE:` including:
+   - Which test(s) you disagree with
    - What the test expects
    - What you believe the correct behavior should be
    - Why (with reference to domain rules, existing patterns, or technical constraints)
+   - The relevant code context (file paths, function signatures)
 
 Example:
 ```
-BLOCKED: Test expects CreateXxx to return ErrDuplicate when name already exists,
-but the repository interface has no UniqueByName method. Either the test should
-be changed to not check uniqueness, or the repository interface needs a new method
-added (which requires a new scaffolding task).
+SPEC_DISPUTE:
+Test: TestApp_CreateXxx_DuplicateName expects CreateXxx to return ErrDuplicate when name already exists.
+Problem: The repository interface has no UniqueByName method and the FEATURE.md does not mention uniqueness as a business rule.
+Recommendation: Either the test expectation is wrong (remove uniqueness check) or the feature spec needs updating (add uniqueness constraint, new repo method, new scaffold task).
+Files: internal/server/app/xxx_test.go:42, internal/server/domain/repositories/xxx/xxx.go
 ```
+
+The runner will escalate this to go-pm for a spec decision. go-pm will review the feature spec, make a ruling, and work with go-architect to create corrective tasks. Do NOT attempt to resolve spec disputes yourself.
 
 ## Verification
 
@@ -216,15 +221,15 @@ The orchestrator will dispatch a go-fixer agent with fresh context. The fixer ca
 When done, return ONLY a short summary to the orchestrator:
 - List of implementation files modified (one per line: `path/to/file.go — created|modified`)
 - One sentence: what was implemented
-- Verification: "go build: PASS, tests: PASS (green)" or "BLOCKED: <reason>"
-- Any issues or disagreements
+- Verification: "go build: PASS, tests: PASS (green)" or "SPEC_DISPUTE: <reason>"
+- Any issues
 
 Do NOT return file contents or full implementation code.
 
 ## Guidelines
 
 - Read each file at most once. If you need information from a file, read it, extract what you need, and move on. Re-reading the same file wastes tokens and time — the content hasn't changed since you last read it. Plan your reads so you get everything you need in one pass.
-- Do not modify test files (`_test.go`, `*test/contract.go`). Tests are the specification written by QA — if you change them to match your implementation, you've lost the independent validation. If a test seems wrong, use the disagreement protocol instead.
+- Do not modify test files (`_test.go`, `*test/contract.go`). Tests are the specification written by QA — if you change them to match your implementation, you've lost the independent validation. If a test seems wrong, return `SPEC_DISPUTE:` and let go-pm arbitrate.
 - Implement only what the tests require. Untested code is unverified code — it may look correct but has no red-phase proof. The security advisor and QA will add tests for additional behavior when needed.
 - Do not add error handling for untested cases. Code without a corresponding test is invisible to the pipeline — it won't be verified, may silently break, and adds maintenance cost with no proven benefit.
 - Follow existing codebase patterns: `fmt.Errorf("verb noun: %w", err)` for wrapping, `strings.TrimSpace()` for sanitization, `time.Now()` for timestamps, driver-specific "not found" error checks. Consistency lets future agents read and extend your code without surprises.

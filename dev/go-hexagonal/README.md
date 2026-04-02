@@ -17,7 +17,7 @@ Production-ready Go code generation following hexagonal architecture with strict
 
 ```
 go-brainstorm (Opus)    — explores problem space, proposes approaches, validates direction
-  └── go-pm (Opus)      — interrogates user, writes FEATURE.md
+  └── go-pm (Opus)      — interrogates user, writes FEATURE.md + spec dispute arbitration
         └── go-architect (Opus)
               ├── go-api-designer (Sonnet)  — HTTP routes, request/response types
               ├── writes TASKS.md + task-N.md (security constraints embedded)
@@ -25,10 +25,12 @@ go-brainstorm (Opus)    — explores problem space, proposes approaches, validat
                     ├── go-scaffolder        — stubs, interfaces, mocks
                     ├── go-test-writer       — red phase (unit, contract, e2e) [+ red verification]
                     ├── go-dev               — green phase (implementation) [+ go-verify evidence]
+                    │     └── SPEC_DISPUTE → go-pm → go-architect → corrective tasks
                     ├── go-reviewer          — two-pass: spec compliance then code quality
+                    ├── go-migrator          — data migrations (backfill, transform, split)
                     ├── go-fixer (Opus)      — circuit breaker recovery
                     ├── go-debugger (Opus)   — systematic root cause (escalation from fixer)
-                    └── go-finish (Sonnet)    — verification, acceptance criteria, cleanup, integration
+                    └── go-finish (Sonnet)   — verification, acceptance criteria, cleanup, integration
 ```
 
 Opus plans and recovers. Sonnet executes. This split cuts cost by ~66% vs running everything on Opus.
@@ -64,6 +66,7 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 | `go-dev` | sonnet | Green phase — implementation to make failing tests pass |
 | `go-reviewer` | sonnet | Plan-first: architecture, security (IDOR/injection), DBA review |
 | `go-fixer` | opus | Circuit breaker recovery — modifies both tests and implementation |
+| `go-migrator` | sonnet | Data migrations — zero-downtime, reversible, batched, testcontainers-tested |
 | `go-runner` | sonnet | Task dispatcher — coordinates subagents, never writes code, invokes go-finish after all tasks |
 | `go-brainstorm` | opus | Problem exploration, approach validation, scope check |
 | `go-debugger` | opus | Systematic root cause investigation through hexagonal layers |
@@ -107,6 +110,7 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 - Never inline skill files into Agent prompts — use `subagent_type` so the framework loads skills via cache (3–5x cheaper).
 - Every subagent summary includes a "Files Modified" section — downstream tasks depend on it.
 - **Circuit breaker**: if a subagent fails the same way twice, it must stop with `CIRCUIT_BREAK:` summary. go-fixer handles recovery with fresh context.
+- **Spec disputes**: if go-dev disagrees with a test expectation, it returns `SPEC_DISPUTE:`. go-runner escalates to go-pm who arbitrates, updates FEATURE.md if needed, and invokes go-architect to create corrective tasks. The pipeline self-heals without blocking on the user.
 
 ### Context Chain
 Pass all dependency summaries (`.plan/<feature-slug>/task-N_SUMMARY.md`) when dispatching downstream tasks. Summaries carry the file manifest that the original task file doesn't know about.

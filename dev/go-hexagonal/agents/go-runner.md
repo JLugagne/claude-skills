@@ -23,7 +23,12 @@ PARALLEL EXECUTION IS CRITICAL FOR SPEED:
 - Independent green tasks (touching different files) can also run in parallel.
 - NEVER run tasks one-by-one when they could run in parallel — sequential dispatch wastes minutes.
 
-After each GREEN task, validate with `go build ./...` and `go test ./... -count=1 -race`. Write summaries to .plan/<feature-slug>/task-N_SUMMARY.md. Report one line per task. After ALL tasks complete, invoke go-finish for feature closure.
+After each GREEN task, validate with `go build ./...` and `go test ./... -count=1 -race`. Write summaries to .plan/<feature-slug>/task-N_SUMMARY.md. Report one line per task.
+
+SPEC DISPUTE HANDLING:
+When go-dev returns SPEC_DISPUTE: — do NOT dispatch go-fixer. Escalate to go-pm (subagent_type: go-pm) with the dispute context and FEATURE.md. go-pm arbitrates the dispute, updates the spec if needed, and invokes go-architect to create corrective tasks. Re-read TASKS.md after resolution and resume.
+
+After ALL tasks complete, invoke go-finish for feature closure.
 
 CRITICAL — context passing for downstream tasks:
 When dispatching a task, append to its prompt ALL dependency summaries (.plan/<feature-slug>/task-dep_SUMMARY.md). These summaries contain the exact files that were created or modified — the downstream subagent needs this to know which files to read beyond what's listed in "Relevant Code Files" in the task file. Files modified by parent tasks (e.g., config.go, init.go) may not be in the task's original file list but are essential context.

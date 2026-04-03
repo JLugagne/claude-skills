@@ -98,7 +98,7 @@ Only when GREEN. Archive questionnaire files to `.plan/<feature-slug>/questions-
 ## Before Reading Code
 
 Before interrogating, quickly scan the codebase to understand:
-0. Read `docs/project/SKILL.md` if it exists — it's a faster overview than scanning
+0. Read `.claude/skills/doc-project/SKILL.md` if it exists — it's a faster overview than scanning
    the entire codebase. Use it to identify which contexts are relevant to this feature,
    then read only the detailed docs for those contexts.
 1. Existing domain models (look in `internal/*/domain/`)

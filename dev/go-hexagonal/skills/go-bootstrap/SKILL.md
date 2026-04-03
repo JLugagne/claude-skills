@@ -53,7 +53,7 @@ For each pattern below, read the corresponding section in [patterns.md](patterns
 - **CI Pipeline** — GitHub Actions with testcontainers
 - **Hooks** — auto-format on edit, build-check before commit
 
-- **Project Map Skeleton** — `docs/project/SKILL.md` (minimal table of contents with the first context) and `docs/project/conventions.md` (patterns established during bootstrap). Context docs are created by go-finish as features arrive.
+- **Project Map Skeleton** — `.claude/skills/doc-project/SKILL.md` (minimal table of contents with the first context) and `.claude/skills/doc-project/conventions.md` (patterns established during bootstrap). Context docs in `.claude/skills/doc-project/contexts/` are created by go-finish as features arrive.
 
 Key principles:
 - Inbound handlers receive the service **interface** from `domain/services/`, not `*app.App`
@@ -94,7 +94,7 @@ After bootstrapping:
 8. `domain/services/` directory exists (inbound port interfaces)
 9. `domain/repositories/` directory exists (outbound port interfaces)
 10. `pkg/<context>/events/` directory exists (event contracts)
-11. `docs/project/SKILL.md` exists (project map skeleton)
+11. `.claude/skills/doc-project/SKILL.md` exists (project map skeleton)
 
 ## After Bootstrap
 

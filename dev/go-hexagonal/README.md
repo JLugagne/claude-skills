@@ -32,7 +32,7 @@ go-product-manager (Opus) — decomposes product spec into features, drives sequ
                     ├── go-fixer (Opus)      — circuit breaker recovery
                     ├── go-debugger (Opus)   — systematic root cause (escalation from fixer)
                     └── go-finish (Sonnet)   — verification, acceptance criteria, cleanup, integration
-                          ├── updates docs/project/ (project map)
+                          ├── updates .claude/skills/doc-project/ (project map)
                           └── compiles .feedback/<slug>/feedback.md
 
 go-retrospective (Opus) — MANUAL ONLY, never auto-invoked
@@ -112,7 +112,7 @@ Opus plans and recovers. Sonnet executes. This split cuts cost by ~66% vs runnin
  │  go-finish  │──── Final verification, acceptance criteria, integration
  └──────┬──────┘
         │
-        ├── Updates docs/project/ (project map)
+        ├── Updates .claude/skills/doc-project/ (project map)
         ├── Compiles .feedback/<slug>/feedback.md
         │
         ▼
@@ -329,7 +329,7 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 - **Spec disputes**: if go-dev disagrees with a test expectation, it returns `SPEC_DISPUTE:`. go-runner escalates to go-pm who arbitrates, updates FEATURE.md if needed, and invokes go-architect to create corrective tasks. The pipeline self-heals without blocking on the user.
 
 ### Project Memory & Feedback Loop
-- **doc-project** maintains a living project map in `docs/project/` — each session reads it instead of scanning the codebase from scratch.
+- **doc-project** maintains a living project map in `.claude/skills/doc-project/` — each session reads it instead of scanning the codebase from scratch.
 - **.feedback/** captures pipeline signals (spec disputes, circuit breaks, guardrail catches, reviewer issues) per feature.
 - **go-retrospective** (manual only) analyzes feedback across features, generates an interactive questionnaire, and proposes skill diffs based on user answers.
 

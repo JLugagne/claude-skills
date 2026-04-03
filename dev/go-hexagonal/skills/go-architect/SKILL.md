@@ -35,7 +35,7 @@ Read `.plan/<feature-slug>/FEATURE.md` to understand what needs to be built.
 
 ### Step 2: Analyze Current Codebase
 
-Before scanning files, read `docs/project/SKILL.md` and the relevant context docs.
+Before scanning files, read `.claude/skills/doc-project/SKILL.md` and the relevant context docs in `.claude/skills/doc-project/contexts/`.
 This gives you the entity inventory, migration numbers, and patterns without reading
 every file. Only scan source files for details the doc doesn't cover.
 

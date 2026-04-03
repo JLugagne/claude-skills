@@ -156,10 +156,10 @@ If the project doesn't exist:
 After bootstrap (or on an existing project), ensure the CLAUDE.md contains:
 - Architectural constraints from the product spec
 - Infrastructure choices (Postgres, NATS, Redis, etc.)
-- A one-line pointer: "See `docs/project/SKILL.md` for the full project map and conventions"
+- A one-line pointer: "See doc-project skill for the full project map and conventions"
 
 Do NOT duplicate conventions or decisions in CLAUDE.md — they live in
-`docs/project/conventions.md`, maintained by doc-project via go-finish.
+`.claude/skills/doc-project/conventions.md`, maintained by go-finish.
 CLAUDE.md is for invariants that apply to every agent in every session.
 
 ### Step 11: Drive Execution

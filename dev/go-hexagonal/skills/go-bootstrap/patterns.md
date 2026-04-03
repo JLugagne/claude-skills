@@ -66,13 +66,12 @@ Reference patterns for go-bootstrap. Read specific sections as needed — don't 
 │   │   ├── go-refactor.md
 │   │   └── go-bootstrap.md
 │   └── settings.json                 # Project settings
-├── docs/
-│   └── project/
-│       ├── SKILL.md                   # Project map — table of contents (loaded each session)
-│       ├── conventions.md             # Patterns established during bootstrap
-│       ├── infrastructure.md          # Infra wiring details (created as features arrive)
-│       ├── api-surface.md             # All endpoints by context (created as features arrive)
-│       └── contexts/                  # Per-context docs (created by go-finish per feature)
+├── .claude/
+│   └── skills/
+│       └── doc-project/               # Project map (auto-loaded by Claude Code)
+│           ├── SKILL.md               # Table of contents (loaded each session)
+│           ├── conventions.md         # Patterns established during bootstrap
+│           └── contexts/              # Per-context docs (created by go-finish per feature)
 ├── .feedback/                         # Pipeline feedback (created by go-finish per feature)
 ├── .plan/                             # Feature plans (created by go-pm, consumed by pipeline)
 ├── go.mod
@@ -382,7 +381,7 @@ jobs:
 Create this during bootstrap. go-finish will enrich it as features are built.
 
 ```
-docs/project/
+.claude/skills/doc-project/
 ├── SKILL.md              # Minimal TOC — first context only
 ├── conventions.md        # Patterns from bootstrap
 └── contexts/             # Empty — populated by go-finish per feature

@@ -28,13 +28,13 @@ For each item: either point to evidence (test name, command output) or flag it a
 
 ### Step 2b: Update Project Map
 
-Read `docs/project/SKILL.md`. Update:
+Read `.claude/skills/doc-project/SKILL.md`. Update:
 1. The context table if a new context was created
 2. The entity/endpoint/event counts for modified contexts
 3. The "Latest Migration" number
 4. The "Recent Features" list (add this feature, keep last 5)
 
-Then read `docs/project/contexts/<context>.md` for each context touched by this feature.
+Then read `.claude/skills/doc-project/contexts/<context>.md` for each context touched by this feature.
 Update:
 - New entities, fields, or invariants
 - New or modified service interfaces

@@ -1,21 +1,36 @@
 ---
-description: Reviews architecture, security, data layer performance, API backward compatibility, application performance, and concurrency in a single pass. Checks hexagonal layering, OWASP vulnerabilities, query performance, missing indexes, breaking API changes, goroutine leaks, and race conditions. Creates fix/test task files.
+description: Orchestrates dual code review with consensus — two Sonnet reviewers
+  (architecture+performance and security+data) run in parallel, Opus arbitrates
+  only when they diverge. Creates fix/test task files.
 ---
 
-# Go Reviewer (Architecture + Security + Data + Performance + Compatibility)
+# Go Reviewer (Dual Review with Consensus)
 
-You perform a single comprehensive review covering architecture compliance, security vulnerabilities, data layer performance, API backward compatibility, application performance, and concurrency. One pass instead of multiple advisor skills.
+You orchestrate a dual review with consensus. Instead of reviewing everything
+yourself, you dispatch two specialized Sonnet reviewers in parallel, then
+handle consensus or escalation.
 
 ## Your Mandate
 
-1. **Start from the plan, not the code.** Read `.plan/<feature-slug>/FEATURE.md`, `.plan/<feature-slug>/TASKS.md`, and all `.plan/<feature-slug>/task-*_SUMMARY.md` files first. Most architecture and security issues are visible in the plan — missing project scoping, wrong layer boundaries, missing test coverage.
-2. Only read code files when the plan review flags a concern that needs code-level verification (e.g., DBA review needs to see actual SQL queries, security review needs to verify parameterized queries).
-3. Create task files for any fixes or additional tests needed.
-4. Append new tasks to `.plan/<feature-slug>/TASKS.md`.
+### Why dual review?
 
-## Review Checklist
+A single reviewer has blind spots. Two reviewers with different focuses catch
+different things. When they agree, confidence is high. When they diverge,
+the disagreement itself is the most valuable signal — it means the code has
+an ambiguity worth examining closely.
 
-### Architecture
+### Flow
+
+1. **Spec compliance check** (Step 0 — single pass, before dual review)
+2. **Dispatch two Sonnet reviewers in parallel** (Step 1)
+3. **Compare findings** (Step 2)
+4. **If they agree** → merge findings, create task files, done
+5. **If they diverge** → escalate divergent points to Opus arbiter (Step 3)
+6. **Merge all findings** → create task files (Step 4)
+
+## Review Checklist (reference for sub-reviewers)
+
+### Architecture (Reviewer A)
 
 **Layer Boundaries:**
 - Domain layer has NO imports from app, inbound, outbound, or pkg
@@ -63,7 +78,37 @@ You perform a single comprehensive review covering architecture compliance, secu
 - Domain → outbound → app → inbound layer order
 - Dependencies correctly set
 
-### Security (OWASP-informed)
+### Performance (Reviewer A)
+
+**Goroutine Safety:**
+- No unbounded goroutine spawning (use worker pools or semaphores)
+- Every goroutine must have a shutdown path (context cancellation, done channels)
+- No goroutine leaks — verify cleanup in deferred functions
+
+**Timeout Discipline:**
+- Every external call (DB, HTTP, queue, cache) has a timeout via context or client config
+- No unbounded blocking operations (channel receives without select/timeout)
+
+**Allocation Patterns:**
+- Pre-allocate slices when length is known: `make([]T, 0, len(input))`
+- Avoid repeated string concatenation in loops (use `strings.Builder`)
+- Watch for unnecessary copies of large structs in range loops
+
+**Serialization:**
+- Response types should use `json.Encoder` streaming for large lists, not `json.Marshal` to buffer
+- Check that `omitempty` is used correctly (empty values vs zero values)
+
+**Race Conditions:**
+- Shared mutable state must be protected (mutex, atomic, channels)
+- Test commands should use `-race` flag
+- Database operations on the same entity from concurrent requests → optimistic locking or serializable isolation
+
+**Deadlock Prevention:**
+- Multiple locks acquired in consistent order
+- Transactions kept short (no external calls inside transactions)
+- No nested transactions without savepoints
+
+### Security (Reviewer B — OWASP-informed)
 
 **Input Validation:**
 - All user inputs validated and sanitized
@@ -84,7 +129,7 @@ You perform a single comprehensive review covering architecture compliance, secu
 - No internal fields leaked in API responses
 - Error messages don't expose implementation details
 
-### API Backward Compatibility
+### API Backward Compatibility (Reviewer B)
 
 **Breaking Changes Detection (in `pkg/<context>/` types):**
 - Field removed from response struct → breaking (clients parsing that field will fail)
@@ -104,39 +149,7 @@ You perform a single comprehensive review covering architecture compliance, secu
 
 When you find a breaking change, create a red-green task pair: the red task adds a test that asserts the old contract still works, the green task either fixes the breaking change or documents it as intentional (versioned API).
 
-### Application Performance
-
-**Goroutine Safety:**
-- No unbounded goroutine spawning (use worker pools or semaphores)
-- Every goroutine must have a shutdown path (context cancellation, done channels)
-- No goroutine leaks — verify cleanup in deferred functions
-
-**Timeout Discipline:**
-- Every external call (DB, HTTP, queue, cache) has a timeout via context or client config
-- No unbounded blocking operations (channel receives without select/timeout)
-
-**Allocation Patterns:**
-- Pre-allocate slices when length is known: `make([]T, 0, len(input))`
-- Avoid repeated string concatenation in loops (use `strings.Builder`)
-- Watch for unnecessary copies of large structs in range loops
-
-**Serialization:**
-- Response types should use `json.Encoder` streaming for large lists, not `json.Marshal` to buffer
-- Check that `omitempty` is used correctly (empty values vs zero values)
-
-### Concurrency
-
-**Race Conditions:**
-- Shared mutable state must be protected (mutex, atomic, channels)
-- Test commands should use `-race` flag
-- Database operations on the same entity from concurrent requests → optimistic locking or serializable isolation
-
-**Deadlock Prevention:**
-- Multiple locks acquired in consistent order
-- Transactions kept short (no external calls inside transactions)
-- No nested transactions without savepoints
-
-### Data Layer (Database/Queue/Cache)
+### Data Layer (Reviewer B — Database/Queue/Cache)
 
 **Query Optimization:**
 - Queries select only needed columns/fields
@@ -161,9 +174,91 @@ When you find a breaking change, create a red-green task pair: the red task adds
 - Length/size constraints on user-input fields
 - Row-level security or equivalent access control if supported
 
-## Creating Task Files
+## Review Process
 
-For each issue found, create a task file at `.plan/<feature-slug>/task-rev-<N>.md`:
+### Step 0: Spec Compliance (single pass, before dual review)
+
+Read `.plan/<feature-slug>/FEATURE.md` and check:
+- Every acceptance criterion has at least one task that addresses it
+- Every API endpoint in the spec has an e2e test task
+- Every business rule has a unit or contract test task
+- Every security consideration has a test + implementation task pair
+- No extra functionality was added beyond the spec (scope creep)
+
+If spec compliance fails, create task files to close the gaps BEFORE running
+the dual code quality review. Spec compliance is binary — no need for consensus.
+
+### Step 1: Dispatch Dual Sonnet Review
+
+Launch TWO review agents in parallel with `model: sonnet`:
+
+**Reviewer A — Architecture + Performance:**
+
+Read the [Reviewer A Prompt](prompts.md#reviewer-a-prompt) in prompts.md.
+
+Focus areas:
+- Layer boundaries (domain/app/inbound/outbound imports)
+- Service interface pattern compliance
+- Type boundaries (domain types not leaking)
+- Protocol type boundaries (HTTP/gRPC/events separation)
+- Interface design (minimal, domain-typed)
+- Mock pattern compliance
+- Goroutine safety, timeout discipline
+- Allocation patterns, serialization
+- Race conditions, deadlock prevention
+- go-arch-lint results (deterministic — run it, report output)
+
+**Reviewer B — Security + Data:**
+
+Read the [Reviewer B Prompt](prompts.md#reviewer-b-prompt) in prompts.md.
+
+Focus areas:
+- Input validation (length, format, UUID)
+- Authorization / IDOR (scope filters in every query)
+- Injection (parameterized queries, allowlisted sort columns)
+- Data exposure (no internal fields in responses)
+- API backward compatibility (breaking changes in pkg/ types)
+- Query optimization (N+1, missing indexes, column selection)
+- Index coverage (FK indexes, ORDER BY indexes, composites)
+- Transaction safety (short transactions, no external calls inside)
+- Schema design (CHECK constraints, cascading deletes, ID validation)
+
+### Step 2: Compare Findings
+
+Read both review summaries. Categorize each finding:
+
+**Agreed findings** — both reviewers flagged the same issue, or one reviewer
+found an issue in their focus area that the other didn't contradict:
+→ Accept directly. Create task files.
+
+**Non-overlapping findings** — one reviewer found something in their focus area
+that the other didn't review (expected — they have different scopes):
+→ Accept directly. Create task files.
+
+**Divergent findings** — the two reviewers disagree on the same piece of code:
+- Reviewer A says it's fine, Reviewer B says it's a problem (or vice versa)
+- They both flag the same code but with different assessments
+- One says "breaking change", the other says "non-breaking"
+→ Collect for Opus arbitration.
+
+### Step 3: Opus Arbitration (only if divergence)
+
+If there are divergent findings, dispatch an Opus arbiter.
+Read the [Opus Arbiter Prompt](prompts.md#opus-arbiter-prompt) in prompts.md.
+
+The arbiter:
+- Reads both reviewer summaries
+- Reads the specific code files in question
+- Makes a ruling for each divergent point
+- Explains the reasoning (this goes into the review report for learning)
+
+If there are NO divergent findings, skip this step entirely — don't burn Opus
+tokens when Sonnets agree.
+
+### Step 4: Merge and Create Task Files
+
+Combine all accepted findings (agreed + non-overlapping + arbiter rulings)
+into a single review report. Create task files for each issue:
 
 **Security issues → red-green pair:**
 ```markdown
@@ -191,47 +286,26 @@ For each issue found, create a task file at `.plan/<feature-slug>/task-rev-<N>.m
 
 Append ALL new tasks to `.plan/<feature-slug>/TASKS.md`.
 
-## Two-Pass Review
-
-The review runs in two logical passes within the single review task:
-
-### Pass 1: Spec Compliance
-Read `.plan/<feature-slug>/FEATURE.md` and check:
-- Every acceptance criterion has at least one task that addresses it
-- Every API endpoint in the spec has an e2e test task
-- Every business rule has a unit or contract test task
-- Every security consideration has a test + implementation task pair
-- No extra functionality was added beyond the spec (scope creep)
-
-If spec compliance fails, create task files to close the gaps BEFORE doing Pass 2.
-
-### Pass 2: Code Quality
-Only after spec compliance passes, review code quality:
-- Architecture checklist (existing)
-- Security checklist (existing)
-- Data layer checklist (existing)
-- Performance checklist (existing)
-
-This ordering matters: fixing code quality issues on code that doesn't match the spec
-is wasted effort.
-
 ## Summary Output
 
-Return ONLY:
+Return:
 ```
 ## Review Report
 
-### Architecture: PASS|NEEDS_ATTENTION
-- [findings]
+### Spec Compliance: PASS|GAPS_FOUND
+- [gaps, if any]
 
-### Security: PASS|NEEDS_ATTENTION
-- [vulnerability classes found]
-- [task files created]
+### Reviewer A (Architecture + Performance): N findings
+- [finding list]
 
-### PostgreSQL: OPTIMAL|NEEDS_FIXES
-- [queries analyzed]
-- [missing indexes]
-- [task files created]
+### Reviewer B (Security + Data): N findings
+- [finding list]
+
+### Consensus: N agreed, N non-overlapping, N divergent
+- [divergent points, if any]
+
+### Opus Arbitration: [SKIPPED — no divergence | N rulings]
+- [rulings, if any]
 
 ### Tasks Created
 - task-rev-1: [title]

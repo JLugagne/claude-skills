@@ -278,7 +278,7 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 | `go-scaffolder` | sonnet | Stubs, interfaces, typed IDs, mocks, migration placeholders |
 | `go-test-writer` | sonnet | Red phase — unit, contract, e2e (testcontainers), security tests |
 | `go-dev` | sonnet | Green phase — implementation to make failing tests pass |
-| `go-reviewer` | sonnet | Plan-first: architecture, security (IDOR/injection), DBA review |
+| `go-reviewer` | sonnet + opus | Dual review: 2 Sonnet (archi+perf, security+data) in parallel, Opus arbitrates divergences |
 | `go-fixer` | opus | Circuit breaker recovery — modifies both tests and implementation |
 | `go-migrator` | sonnet | Data migrations — zero-downtime, reversible, batched, testcontainers-tested |
 | `go-runner` | sonnet | Task dispatcher — coordinates subagents, never writes code, invokes go-finish after all tasks |
@@ -353,3 +353,4 @@ This pipeline implements patterns from Anthropic's "Building Effective Agents", 
 | **Worktree Isolation** | Parallel tasks that might conflict use `isolation: "worktree"` for safe concurrent execution | Claude Code worktrees |
 | **Spec Dispute Protocol** | SPEC_DISPUTE → go-pm arbitration → go-architect corrective tasks — pipeline self-heals | Custom (inspired by OpenAI guardrail tripwires) |
 | **Circuit Breaker + Escalation** | 2 failures → go-fixer (fresh eyes) → go-debugger (systematic investigation) → user | Anthropic's agent error recovery |
+| **Dual Review with Consensus** | Two Sonnet reviewers in parallel (architecture vs security), Opus arbitrates only on disagreement — ~2x Sonnet cost, Opus only when needed | Custom |

@@ -170,7 +170,8 @@ For each feature in dependency order:
 2. Update the feature status to `in-progress`
 3. Invoke go-pm with `subagent_type: go-pm`. Read the [Feature Dispatch Prompt](patterns.md#feature-dispatch-prompt) in patterns.md for the dispatch template.
 4. When go-pm + go-runner complete the feature, update `.plan/PRODUCT.md` status to `done`
-5. Move to the next feature
+5. Verify go-finish has updated `.claude/skills/doc-project/SKILL.md` before proceeding. The next feature's go-pm will read doc-project — it must reflect the completed feature.
+6. Move to the next feature
 
 ### Step 12: Present Progress
 
@@ -197,6 +198,7 @@ If during a feature's execution, go-pm discovers that the product spec is missin
 
 - Read each file at most once.
 - Never skip features in dependency order. If feature 3 depends on feature 2, feature 2 must be `done` before feature 3 starts.
+- Features are ALWAYS sequential, never parallel. Each feature must complete (go-finish done, doc-project updated, PRODUCT.md status set to `done`) before the next feature starts. This is not just a dependency rule — it's a structural requirement because doc-project and PRODUCT.md are singleton files that cannot be safely updated concurrently.
 - Keep feature summaries concise — 2-3 sentences max. The detail comes from go-pm's interrogation, not from you.
 - Don't decompose beyond what the spec supports. If the spec says "RBAC" in one paragraph, that's one feature — don't invent sub-features the spec doesn't describe.
 - If the spec is ambiguous about boundaries, ask the user ONE question to clarify, then move on. Don't interrogate — that's go-pm's job.

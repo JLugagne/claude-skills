@@ -28,21 +28,28 @@ For each item: either point to evidence (test name, command output) or flag it a
 
 ### Step 2b: Update Project Map
 
+**Sequential safety:** This step modifies `.claude/skills/doc-project/SKILL.md`, which is
+a singleton file. If another feature's go-finish is running concurrently, you WILL create
+merge conflicts. This is safe because go-product-manager drives features sequentially —
+but if you were invoked manually outside that flow, verify no other feature is in progress
+before updating.
+
 Read `.claude/skills/doc-project/SKILL.md`. Update:
 1. The context table if a new context was created
 2. The entity/endpoint/event counts for modified contexts
 3. The "Latest Migration" number
 4. The "Recent Features" list (add this feature, keep last 5)
 
-Then read `.claude/skills/doc-project/contexts/<context>.md` for each context touched by this feature.
-Update:
+Then read `.claude/skills/doc-project/contexts/<context>.md` for each context touched
+by this feature. Update:
 - New entities, fields, or invariants
 - New or modified service interfaces
 - New or modified endpoints
 - New or modified events
 - New migration files
 
-If the context doc doesn't exist, create it following the template above.
+If the context doc doesn't exist, create it at `.claude/skills/doc-project/contexts/<context>.md`
+following the context doc template in patterns.md.
 
 Keep updates factual — list what exists, don't interpret. The doc is a map, not a narrative.
 

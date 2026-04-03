@@ -86,11 +86,11 @@ After bootstrapping:
 3. `docker-compose up -d` — infrastructure starts
 4. `curl localhost:<port>/health` — returns `{"status":"ok"}`
 5. `.claude/agents/` has 16 agent files
-8. `go-arch-lint check` — zero violations (architectural boundaries enforced)
-9. `make lint-pipeline` — all skills and agents referenced in the pipeline exist
-6. `domain/services/` directory exists (inbound port interfaces)
-7. `domain/repositories/` directory exists (outbound port interfaces)
-8. `pkg/<context>/events/` directory exists (event contracts)
+6. `go-arch-lint check` — zero violations (architectural boundaries enforced)
+7. `make lint-pipeline` — all skills and agents referenced in the pipeline exist
+8. `domain/services/` directory exists (inbound port interfaces)
+9. `domain/repositories/` directory exists (outbound port interfaces)
+10. `pkg/<context>/events/` directory exists (event contracts)
 
 ## After Bootstrap
 

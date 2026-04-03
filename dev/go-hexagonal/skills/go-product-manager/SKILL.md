@@ -78,7 +78,72 @@ Rules:
 
 Write `.plan/PRODUCT.md`. Read the [PRODUCT.md Template](patterns.md#productmd-template) pattern in patterns.md when writing this.
 
-### Step 6: Bootstrap (if needed)
+Set the status to `INTERROGATION` — the product is not ready for execution until
+the coherence loop completes.
+
+### Step 6: Interrogate Ambiguities
+
+For EACH feature, generate a questionnaire file at `.plan/questions/<feature-slug>.md`.
+Read the [Feature Questionnaire Template](patterns.md#feature-questionnaire-template) in patterns.md.
+
+For each feature, identify questions the spec does NOT answer:
+- Scope: what's in, what's out, what's deferred?
+- Entities: fields, types, constraints not specified?
+- Errors: failure modes not described?
+- Cross-feature: how does this interact with other features?
+- Limits: rate limits, size limits, cardinality?
+- Edge cases: concurrent access, empty state, migration from existing data?
+
+Each question must have:
+- 2-3 concrete options with trade-offs
+- An "Other" option for custom answers
+- A "Why it matters" field explaining what breaks if guessed wrong
+
+Use the [Question Categories](patterns.md#question-categories) reference to generate
+category-appropriate questions.
+
+After writing all questionnaires, tell the user:
+"Feature questionnaires at `.plan/questions/`. Fill them in, re-invoke @go-product-manager."
+
+### Step 7: Process Answers
+
+When re-invoked, read all `.plan/questions/<feature-slug>.md` files.
+
+For each question:
+- **Option selected** → incorporate into PRODUCT.md feature details
+- **"Other" with text** → interpret and incorporate
+- **No selection on critical question** → ask via AskUserQuestion
+- **No selection on nice-to-have** → make a reasonable default, note in PRODUCT.md
+
+Update `.plan/PRODUCT.md`:
+- Enrich each Feature Detail with a `**Decisions:**` field summarizing key answers
+- Update entity definitions, endpoints, events if answers changed them
+- Update dependencies if answers revealed new cross-feature links
+
+Archive answered questionnaires to `.plan/questions/done/`.
+
+### Step 8: Cross-Feature Coherence Check
+
+After integrating answers, validate cross-feature coherence.
+Read the [Cross-Feature Coherence Checklist](patterns.md#cross-feature-coherence-checklist) in patterns.md.
+
+Check:
+- **Entity coherence** — same entity defined the same way in all features that reference it?
+- **Event coherence** — every consumed event has a producer feature? Schemas match?
+- **Dependency coherence** — no hidden dependencies? No two features modifying the same table in conflicting ways?
+- **Constraint coherence** — all features respect the architectural constraints?
+- **Scope coherence** — every spec section covered by at least one feature? No duplicates?
+
+Assess verdict:
+- **RED** — major conflicts found. Generate new questionnaires targeting the conflicts. Go back to Step 6.
+- **YELLOW** — minor gaps. Generate targeted questions for the gaps only. Go back to Step 6.
+- **GREEN** — coherent. Update PRODUCT.md status to `GREEN — ready for execution`. Proceed.
+
+Log each coherence check in the `## Coherence Log` section of PRODUCT.md.
+
+Loop Steps 6→7→8 until GREEN.
+
+### Step 9: Bootstrap (if needed)
 
 If the project doesn't exist:
 1. Extract infrastructure requirements from the spec
@@ -86,14 +151,14 @@ If the project doesn't exist:
 3. Present to user: "The project needs bootstrapping with [infra list]. Ready?"
 4. On approval, invoke go-bootstrap with the infrastructure details
 
-### Step 7: Update CLAUDE.md
+### Step 10: Update CLAUDE.md
 
 After bootstrap (or on an existing project), ensure the CLAUDE.md contains:
 - Architectural constraints from the product spec
 - Infrastructure decisions
 - A `## Decisions` section with links to `docs/decisions/` (start empty, grows per feature)
 
-### Step 8: Drive Execution
+### Step 11: Drive Execution
 
 For each feature in dependency order:
 
@@ -103,7 +168,7 @@ For each feature in dependency order:
 4. When go-pm + go-runner complete the feature, update `.plan/PRODUCT.md` status to `done`
 5. Move to the next feature
 
-### Step 9: Present Progress
+### Step 12: Present Progress
 
 After each feature completes, present a progress report. Read the [Progress Report](patterns.md#progress-report) format in patterns.md.
 
@@ -122,6 +187,7 @@ If during a feature's execution, go-pm discovers that the product spec is missin
 1. go-pm updates FEATURE.md for the current feature
 2. After the feature completes, update `.plan/PRODUCT.md` to reflect any new features or changed dependencies discovered during implementation
 3. New features go at the end of the list unless they block something already planned
+4. If a scope change creates a cross-feature inconsistency, re-run the coherence check (Step 8) before continuing with the next feature
 
 ## Guidelines
 

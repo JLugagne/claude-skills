@@ -9,6 +9,8 @@ Use this template when writing `.plan/PRODUCT.md` after decomposing the product 
 ```markdown
 # Product: [Name]
 
+## Status: [INTERROGATION | GREEN — ready for execution]
+
 ## Source
 [Path to the product spec document, or "User conversation"]
 <!-- Link to the original document so future agents can reference it -->
@@ -47,11 +49,19 @@ Use this template when writing `.plan/PRODUCT.md` after decomposing the product 
 **Entities:** [key entities involved]
 **Endpoints:** [key API endpoints, if any]
 **Events:** [events consumed or emitted, if any]
+**Decisions:** [key decisions from questionnaire answers — added after Step 7]
 **Acceptance:** [high-level definition of done — go-pm will expand this]
 <!-- Keep summaries concise — go-pm will interrogate the full detail -->
 
 ### Feature 2: [Name]
 ...
+
+## Coherence Log
+
+| Date | Verdict | Conflicts | Resolution |
+|------|---------|-----------|------------|
+| YYYY-MM-DD | RED | [conflict summary] | [questionnaire round 2] |
+| YYYY-MM-DD | GREEN | none | ready for execution |
 ```
 
 ## Feature Dispatch Prompt
@@ -65,6 +75,11 @@ New feature for the product. Here is the context:
 [Feature detail section from PRODUCT.md]
 <!-- Copy the Feature N section verbatim — go-pm needs the summary,
      entities, endpoints, events, and acceptance criteria as a starting point -->
+
+# Decisions Already Made
+[Summarize key questionnaire answers for this feature from PRODUCT.md]
+<!-- go-pm should NOT re-interrogate these — they are settled at the product level -->
+<!-- Include entity definitions, error behaviors, cross-feature contracts that were decided -->
 
 # Product Context
 [Relevant constraints and decisions from CLAUDE.md]
@@ -99,3 +114,112 @@ Remaining:
 ○ Feature X — [name] (in progress)
 ○ Feature Y — [name]
 ```
+
+## Feature Questionnaire Template
+
+Use this when writing `.plan/questions/<feature-slug>.md`.
+
+```markdown
+# Questions: [Feature Name]
+
+Feature: #N — [Name]
+Context: [bounded context]
+Round: [1 | 2 | 3...]
+
+Instructions: For each question, mark your choice with [x].
+If none fit, write your answer under "Other".
+Save when done, re-invoke @go-product-manager.
+
+---
+
+## Q1: [Short title]
+
+**Context:** [what the spec says]
+**Gap:** [what's unclear]
+**Why it matters:** [what breaks if we guess wrong]
+
+- [ ] **A) [Solution]** — [description + trade-off]
+- [ ] **B) [Alternative]** — [description + trade-off]
+- [ ] **C) [Third option if applicable]** — [description + trade-off]
+- [ ] **Other:**
+  [Write your answer here]
+
+---
+
+## Q2: [Short title]
+...
+
+---
+
+## Additional context
+[Anything not covered above]
+```
+
+## Cross-Feature Coherence Checklist
+
+Run after processing questionnaire answers (Step 8).
+
+```markdown
+## Coherence Check: YYYY-MM-DD
+
+### Entity Coherence
+- [ ] Same fields and types across all features that reference the same entity?
+- [ ] Same aggregate root assignments?
+- [ ] Same ownership (which context owns each entity)?
+→ Conflict: [describe, or "none"]
+
+### Event Coherence
+- [ ] Every consumed event has a producer feature?
+- [ ] Schemas consistent between producer and consumers?
+- [ ] No circular event dependencies?
+→ Conflict: [describe, or "none"]
+
+### Dependency Coherence
+- [ ] All required entities exist in a prior feature?
+- [ ] No two features modify the same table in conflicting ways?
+→ Conflict: [describe, or "none"]
+
+### Constraint Coherence
+- [ ] All features respect architectural constraints (multi-tenancy, security, migration policies)?
+→ Conflict: [describe, or "none"]
+
+### Scope Coherence
+- [ ] Every spec section covered by at least one feature?
+- [ ] No duplicate implementations across features?
+→ Gap: [describe, or "none"]
+
+### Verdict: [RED | YELLOW | GREEN]
+```
+
+## Question Categories
+
+Reference for generating category-appropriate questions per feature type.
+
+### Identity/Auth features
+- Role hierarchy, tenant isolation model, API key scoping, SSO fallback behavior
+- Session management, token expiry, refresh strategy
+- Admin vs self-service operations
+
+### Data ingestion features
+- Payload format validation, deduplication strategy, failure mode (reject vs partial accept)
+- Batch boundaries, max payload size, concurrent ingestion limits
+- Idempotency guarantees
+
+### Analysis/computation features
+- Trigger mechanism (on-demand, event-driven, scheduled)
+- Scope (per-tenant, per-entity, global)
+- Staleness tolerance, cache invalidation, conflict resolution
+- Resource limits (max computation time, max memory)
+
+### Policy/governance features
+- Evaluation trigger (on write, on read, scheduled)
+- Override mechanism (admin override, emergency bypass)
+- Retroactivity (apply to existing data?)
+- Default behavior when no policy matches
+
+### Integration features
+- Direction (push, pull, bidirectional)
+- Conflict resolution strategy
+- Rate limits (inbound and outbound)
+- Credential storage and rotation
+- Retry and circuit breaker behavior

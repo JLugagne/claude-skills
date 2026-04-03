@@ -77,6 +77,96 @@ For simple CRUD entities with no parent constraints, mark them as their own aggr
 - [ ] No regressions in existing tests
 ```
 
+## pm-feature-questionnaire-template
+
+Use this when writing `.plan/<feature-slug>/questions.md`.
+
+```markdown
+# Questions: [Feature Name]
+
+Feature slug: <feature-slug>
+Round: [1 | 2 | 3...]
+Product decisions already made: [reference .plan/PRODUCT.md decisions if applicable]
+
+Instructions: Mark choices with [x]. Write under "Other" if none fit.
+Re-invoke @go-pm when done.
+
+---
+
+## Phase 1: Feature Understanding
+
+### Q1: [What triggers this feature?]
+**Context:** [what the spec or product manager said]
+**Gap:** [what's unclear about the trigger]
+**Why it matters:** [e.g., "determines whether we need an event consumer or an HTTP endpoint"]
+
+- [ ] **A)** [option] — [trade-off]
+- [ ] **B)** [option] — [trade-off]
+- [ ] **Other:**
+  [Write your answer here]
+
+---
+
+## Phase 2: Entities & Aggregates
+
+### Q2: [Which entity is the aggregate root?]
+**Context:** [entities mentioned in the spec]
+**Gap:** [which entity owns the lifecycle]
+**Why it matters:** [e.g., "determines where validation methods live and what contract tests cover"]
+
+- [ ] **A)** [option] — [trade-off]
+- [ ] **B)** [option] — [trade-off]
+- [ ] **Other:**
+  [Write your answer here]
+
+---
+
+## Phase 3: Boundaries & Constraints
+
+### Q3: [What happens on failure?]
+**Context:** [...]
+**Gap:** [...]
+**Why it matters:** [...]
+
+- [ ] **A)** [option] — [trade-off]
+- [ ] **B)** [option] — [trade-off]
+- [ ] **Other:**
+  [Write your answer here]
+
+---
+
+## Phase 4: Integration
+
+### Q4: [Database changes needed?]
+**Context:** [...]
+**Gap:** [...]
+**Why it matters:** [...]
+
+- [ ] **A)** [option] — [trade-off]
+- [ ] **B)** [option] — [trade-off]
+- [ ] **Other:**
+  [Write your answer here]
+
+---
+
+## Phase 5: Acceptance Criteria
+
+### Q5: [What defines done?]
+**Context:** [...]
+**Gap:** [...]
+**Why it matters:** [...]
+
+- [ ] **A)** [option] — [trade-off]
+- [ ] **B)** [option] — [trade-off]
+- [ ] **Other:**
+  [Write your answer here]
+
+---
+
+## Additional context
+[Anything not covered above — constraints, preferences, prior art]
+```
+
 ## dispute-resolution-agent-prompt
 
 When resolving a spec dispute, invoke go-architect with this prompt structure. Each section tells the architect exactly what corrective tasks to create.

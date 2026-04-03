@@ -376,3 +376,79 @@ jobs:
   }
 }
 ```
+
+## Doc-Project Skeleton
+
+Create this during bootstrap. go-finish will enrich it as features are built.
+
+```
+docs/project/
+├── SKILL.md              # Minimal TOC — first context only
+├── conventions.md        # Patterns from bootstrap
+└── contexts/             # Empty — populated by go-finish per feature
+```
+
+### SKILL.md (initial)
+
+```markdown
+---
+name: doc-project
+description: Project map for [project-name]. Read this before scanning the codebase.
+  Provides bounded context inventory, entity relationships, infrastructure wiring,
+  and conventions. Always check this first — it's faster than grep.
+invoke: agent
+trigger: description
+---
+
+# Project Map: [project-name]
+
+## Bounded Contexts
+
+| Context | Entities | Endpoints | Events | Doc |
+|---------|----------|-----------|--------|-----|
+| [first-context] | — | 1 HTTP (health) | — | [details](contexts/[first-context].md) |
+
+## Infrastructure
+- [list from bootstrap interview — e.g., "Postgres 17", "Redis 7", "NATS JetStream"]
+
+## Conventions
+- IDs: UUID v7, typed (`type XxxID string`) — [details](conventions.md)
+- Errors: `domainerror.New(code, message)` — [details](conventions.md)
+- Mocks: function-based with panic on unset — [details](conventions.md)
+- Scoping: all repo methods take scopeID first after ctx — [details](conventions.md)
+
+## Latest Migration: 001_initial.sql
+
+## Recent Features
+- Bootstrap completed [date]
+```
+
+### conventions.md (initial)
+
+```markdown
+# Conventions
+
+Established during bootstrap. Updated by go-finish as features add new patterns.
+
+## IDs
+- All entity IDs use UUID v7: `type XxxID string`, `func NewXxxID() XxxID`
+- Parameter order: broad to narrow — `(ctx, scopeID, entityID)`
+
+## Errors
+- Domain errors: `domainerror.New(code, message)` — `domain/errors/errors.go`
+- HTTP error responses: `{"error": {"code": "...", "message": "..."}}` via `writeErrorJSON()`
+
+## Mocks
+- Function-based: `XxxFunc func(...)` fields on mock structs
+- Unset functions panic: `"called not defined XxxFunc"`
+- Compile-time check: `var _ Interface = (*Mock)(nil)`
+
+## Testing
+- All tests run with `-race` flag
+- Testcontainers for infrastructure (Postgres, Redis, etc.)
+- Contract tests shared between mock and real adapter
+
+## Scoping
+- All repository methods include scopeID as first param after ctx
+- SQL queries always filter by both entity ID AND scope ID
+```

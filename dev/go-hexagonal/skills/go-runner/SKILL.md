@@ -13,6 +13,30 @@ These files must exist in `.plan/<feature-slug>/`:
 - `.plan/<feature-slug>/TASKS.md` — ordered task list
 - `.plan/<feature-slug>/task-<id>.md` — one file per task
 
+## Resume Protocol
+
+If the pipeline was interrupted (crash, token limit, timeout, or manual stop), the runner
+can resume from where it left off:
+
+1. Read `.plan/<feature-slug>/TASKS.md` — check the Status column for each task.
+2. Tasks marked `done` are skipped — their summaries already exist.
+3. Tasks marked `in-progress` are treated as `pending` — the previous attempt may be incomplete.
+   Re-dispatch them from scratch with a fresh subagent.
+4. Tasks marked `pending` with all dependencies `done` are the next to execute.
+5. Tasks marked `failed` or `circuit_break` need recovery — follow the circuit breaker flow.
+6. Tasks marked `spec_dispute` need resolution — follow the spec dispute flow.
+
+**The runner does NOT need special "resume mode".** The normal execution loop already reads
+TASKS.md and finds the next executable task. Resume works because:
+- Completed tasks have summaries on disk (task-N_SUMMARY.md)
+- The TASKS.md status column persists across sessions
+- Each subagent runs with fresh context regardless
+
+The only risk is a task marked `done` in TASKS.md but whose summary file is missing.
+On resume, before skipping a `done` task, verify its summary file exists:
+- If `.plan/<feature-slug>/task-<id>_SUMMARY.md` exists → skip, it's truly done
+- If the summary is missing → re-dispatch the task (the status was written prematurely)
+
 ## Execution Loop
 
 ### Step 1: Read the Plan

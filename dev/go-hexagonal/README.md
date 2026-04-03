@@ -16,8 +16,9 @@ Production-ready Go code generation following hexagonal architecture with strict
 ## Pipeline Architecture
 
 ```
-go-brainstorm (Opus)    — explores problem space, proposes approaches, validates direction
-  └── go-pm (Opus)      — interrogates user, writes FEATURE.md + spec dispute arbitration
+go-product-manager (Opus) — decomposes product spec into features, drives sequential execution
+  └── go-brainstorm (Opus)    — explores problem space, proposes approaches, validates direction
+        └── go-pm (Opus)      — interrogates user, writes FEATURE.md + spec dispute arbitration
         └── go-architect (Opus)
               ├── go-api-designer (Sonnet)  — HTTP routes, request/response types
               ├── writes TASKS.md + task-N.md (security constraints embedded)
@@ -40,7 +41,17 @@ Opus plans and recovers. Sonnet executes. This split cuts cost by ~66% vs runnin
 ### Happy Path (feature lifecycle)
 
 ```
- User describes feature
+ User provides product spec or describes feature
+       │
+       ├── Full product? ──────────────────────────┐
+       │                                           ▼
+       │                                ┌─────────────────────┐
+       │                                │ go-product-manager  │
+       │                                │ Decomposes into     │
+       │                                │ ordered features    │
+       │                                └──────────┬──────────┘
+       │                                           │ For each feature:
+       │◀──────────────────────────────────────────┘
        │
        ▼
  ┌─────────────┐
@@ -229,10 +240,19 @@ The `go-bootstrap` agent asks about your infrastructure (PostgreSQL, Redis, Kafk
 
 `go-pm` interrogates the spec until it's solid, then drives the full pipeline automatically.
 
+### Full product from a spec
+
+```
+@go-product-manager Here is the product spec: [paste or reference the document]
+```
+
+`go-product-manager` decomposes the spec into ordered features, bootstraps the project if needed, then drives execution feature-by-feature through the go-hexagonal pipeline.
+
 ## Agents & Skills
 
 | Name | Model | Role |
 |------|-------|------|
+| `go-product-manager` | opus | Product decomposition — spec → ordered features → sequential execution |
 | `go-bootstrap` | opus | Scaffolds new project from scratch |
 | `go-pm` | opus | Feature spec interrogation, FEATURE.md, pipeline handoff |
 | `go-architect` | opus | TASKS.md + task files with embedded security constraints |

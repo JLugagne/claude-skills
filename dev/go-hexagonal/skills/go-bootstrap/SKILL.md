@@ -48,7 +48,8 @@ For each pattern below, read the corresponding section in [patterns.md](patterns
 - **Error Response Helper** — `writeErrorJSON()` for structured JSON errors
 - **Health Check** — `GET /health` returning `{"status":"ok"}`
 - **E2E Test Setup** — `TestMain` with testcontainers boilerplate
-- **Makefile** — build, test, lint, migrate targets
+- **Makefile** — build, test, lint, lint-arch, lint-pipeline, migrate targets
+- **Architecture Lint Config** — `.go-arch-lint.yml` enforcing hexagonal layer dependencies
 - **CI Pipeline** — GitHub Actions with testcontainers
 - **Hooks** — auto-format on edit, build-check before commit
 
@@ -59,7 +60,7 @@ Key principles:
 
 ### Install Skill/Agent Suite
 
-Copy all 15 agent files to `.claude/agents/`:
+Copy all 16 agent files to `.claude/agents/`:
 - `go-brainstorm.md` — Problem exploration (approach validation, scope check)
 - `go-pm.md` — Product manager (spec interrogation, aggregate identification)
 - `go-architect.md` — Architecture design (TASKS.md generation)
@@ -74,6 +75,7 @@ Copy all 15 agent files to `.claude/agents/`:
 - `go-runner.md` — Task execution (dispatch, validate, report)
 - `go-finish.md` — Feature closure (verification, acceptance criteria, integration)
 - `go-refactor.md` — Safe refactoring (document, lock, rewrite)
+- `go-product-manager.md` — Product decomposition (spec → ordered features → sequential execution)
 - `go-bootstrap.md` — This file
 
 ## Verification
@@ -83,7 +85,9 @@ After bootstrapping:
 2. `go test -race ./... -short` — health check test passes
 3. `docker-compose up -d` — infrastructure starts
 4. `curl localhost:<port>/health` — returns `{"status":"ok"}`
-5. `.claude/agents/` has 15 agent files
+5. `.claude/agents/` has 16 agent files
+8. `go-arch-lint check` — zero violations (architectural boundaries enforced)
+9. `make lint-pipeline` — all skills and agents referenced in the pipeline exist
 6. `domain/services/` directory exists (inbound port interfaces)
 7. `domain/repositories/` directory exists (outbound port interfaces)
 8. `pkg/<context>/events/` directory exists (event contracts)

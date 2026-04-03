@@ -248,9 +248,84 @@ lint:
 	go vet ./...
 	golangci-lint run ./...
 
+lint-arch:
+	go-arch-lint check
+
+lint-pipeline:
+	@echo "Checking pipeline consistency..."
+	@for skill in go-scaffolder go-test-writer go-dev go-migrator go-reviewer go-fixer go-debugger go-pm go-finish; do \
+		if [ ! -f ".claude/skills/$$skill/SKILL.md" ]; then \
+			echo "ERROR: runner references skill '$$skill' but .claude/skills/$$skill/SKILL.md does not exist"; \
+			exit 1; \
+		fi; \
+	done
+	@for agent in go-brainstorm go-pm go-architect go-api-designer go-scaffolder go-test-writer go-dev go-reviewer go-migrator go-fixer go-debugger go-runner go-finish go-refactor go-bootstrap go-product-manager; do \
+		if [ ! -f ".claude/agents/$$agent.md" ]; then \
+			echo "ERROR: bootstrap lists agent '$$agent' but .claude/agents/$$agent.md does not exist"; \
+			exit 1; \
+		fi; \
+	done
+	@EXPECTED=16; \
+	ACTUAL=$$(ls .claude/agents/*.md 2>/dev/null | wc -l); \
+	if [ "$$ACTUAL" -ne "$$EXPECTED" ]; then \
+		echo "WARNING: expected $$EXPECTED agents, found $$ACTUAL"; \
+	fi
+	@echo "Pipeline consistency: OK"
+
+lint-all: lint lint-arch lint-pipeline
+
 migrate:
 	# Run migrations against local dev database
 ```
+
+## Architecture Lint Config (.go-arch-lint.yml)
+
+```yaml
+version: 3
+workdir: internal
+allow:
+  depOnAnyVendor: true
+
+components:
+  domain:
+    in: "*/domain/**"
+  app:
+    in: "*/app/**"
+  inbound:
+    in: "*/inbound/**"
+  outbound:
+    in: "*/outbound/**"
+  pkg:
+    in: "../pkg/**"
+
+commonComponents:
+  - domain
+
+deps:
+  domain:
+    mayDependOn: []
+  app:
+    mayDependOn:
+      - domain
+  outbound:
+    mayDependOn:
+      - domain
+  inbound:
+    mayDependOn:
+      - domain
+      - pkg
+  pkg:
+    mayDependOn: []
+```
+
+This config enforces:
+- domain/ imports NOTHING from other layers
+- app/ imports only domain/
+- outbound/ imports only domain/
+- inbound/ imports domain/ and pkg/ (for public types)
+- pkg/ imports nothing internal
+
+Run `go-arch-lint check` to verify. Zero false positives — violations are real bugs.
 
 ## CI Pipeline (.github/workflows/ci.yml)
 

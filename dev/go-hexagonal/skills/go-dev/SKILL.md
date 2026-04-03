@@ -84,6 +84,12 @@ After implementing, run ALL of these and report the actual output:
 1. `go build ./...` — report exit code
 2. `go test ./... -run <TestPattern> -count=1 -v -race` — report which tests pass/fail
 3. `go test ./... -count=1 -race` — report full suite results
+4. `go-arch-lint check` — report any layer violations
+
+If go-arch-lint reports a violation, fix it before claiming done. Common fixes:
+- domain/ importing from outbound/ → move the type to domain/ or use an interface
+- inbound/ importing from app/ → depend on the service interface in domain/services/, not *app.App
+- pkg/ importing from internal/ → move the shared type to pkg/ or remove the dependency
 
 CRITICAL: Always include `-race` flag. Always include `-count=1` (no cache).
 Report the actual command output, not a summary. "Tests pass" without output

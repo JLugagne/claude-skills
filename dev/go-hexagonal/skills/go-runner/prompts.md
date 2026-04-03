@@ -79,8 +79,10 @@ Read ONLY the files listed in "Files Modified". Check for:
 1. IDOR: Every query on scoped entities includes scope ID?
    — Look for SQL/queries that filter by entity ID alone without scope
    — Check repository method signatures include scopeID parameter
-2. Layer violations: Domain imports from app/inbound/outbound?
-   — Domain layer must have zero imports from other layers
+2. Layer violations: Run `go-arch-lint check` — report any violations.
+   — This is DETERMINISTIC. If go-arch-lint says it's clean, it's clean.
+   — Only flag layer issues if go-arch-lint reports them.
+   — Skip the manual import check — the linter does it better.
 3. Error masking: All DB errors collapsed into not-found?
    — Only the driver's specific "no rows" error should map to domain not-found
    — Timeouts, connection errors must propagate as-is (500, not 404)

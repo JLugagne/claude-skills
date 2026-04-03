@@ -41,6 +41,7 @@ BEFORE claiming any task is done:
 | Migrations work | Testcontainer starts, seeds, and tests pass | "Migration SQL looks correct" |
 | Refactor safe | ALL Phase 2 e2e-refactor tests still pass | "Logic unchanged" |
 | Pipeline task done | build + specific tests + full suite | Build alone |
+| Layer violations | `go-arch-lint check` — 0 violations | "Domain doesn't import outbound" |
 | Feature complete | ALL of the above + acceptance criteria checked | "Tests pass" |
 
 ## Verification Sequences by Role
@@ -55,9 +56,12 @@ go test ./internal/<context>/... -run TestSpecificPattern -count=1 -v -race
 
 # 3. Full suite (no regressions)
 go test ./... -count=1 -race
+
+# 4. Architecture compliance (deterministic — zero tokens)
+go-arch-lint check
 ```
 
-All three must pass. Report the output.
+All four must pass. Report the output.
 
 ### go-test-writer (red phase)
 ```bash

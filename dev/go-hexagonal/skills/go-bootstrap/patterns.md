@@ -66,6 +66,14 @@ Reference patterns for go-bootstrap. Read specific sections as needed — don't 
 │   │   ├── go-refactor.md
 │   │   └── go-bootstrap.md
 │   └── settings.json                 # Project settings
+├── docs/
+│   └── project/
+│       ├── SKILL.md                   # Project map — table of contents (loaded each session)
+│       ├── conventions.md             # Patterns established during bootstrap
+│       ├── infrastructure.md          # Infra wiring details (created as features arrive)
+│       ├── api-surface.md             # All endpoints by context (created as features arrive)
+│       └── contexts/                  # Per-context docs (created by go-finish per feature)
+├── .feedback/                         # Pipeline feedback (created by go-finish per feature)
 ├── .plan/                             # Feature plans (created by go-pm, consumed by pipeline)
 ├── go.mod
 ├── go.sum
@@ -259,13 +267,13 @@ lint-pipeline:
 			exit 1; \
 		fi; \
 	done
-	@for agent in go-brainstorm go-pm go-architect go-api-designer go-scaffolder go-test-writer go-dev go-reviewer go-migrator go-fixer go-debugger go-runner go-finish go-refactor go-bootstrap go-product-manager; do \
+	@for agent in go-brainstorm go-pm go-architect go-api-designer go-scaffolder go-test-writer go-dev go-reviewer go-migrator go-fixer go-debugger go-runner go-finish go-refactor go-bootstrap go-product-manager go-retrospective; do \
 		if [ ! -f ".claude/agents/$$agent.md" ]; then \
 			echo "ERROR: bootstrap lists agent '$$agent' but .claude/agents/$$agent.md does not exist"; \
 			exit 1; \
 		fi; \
 	done
-	@EXPECTED=16; \
+	@EXPECTED=17; \
 	ACTUAL=$$(ls .claude/agents/*.md 2>/dev/null | wc -l); \
 	if [ "$$ACTUAL" -ne "$$EXPECTED" ]; then \
 		echo "WARNING: expected $$EXPECTED agents, found $$ACTUAL"; \

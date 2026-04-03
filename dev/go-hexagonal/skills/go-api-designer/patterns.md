@@ -89,6 +89,47 @@ type XxxListResponse struct {
 }
 ```
 
+## grpc-design-template
+
+Use this template for gRPC service design. Each RPC maps to a service interface method — the same method HTTP handlers call.
+
+```protobuf
+// .plan/<feature-slug>/API_DESIGN_GRPC.proto
+// This is a DESIGN REFERENCE — not a real proto file.
+// The scaffolder creates the actual proto at pkg/<context>/grpc/proto/<context>.proto.
+
+syntax = "proto3";
+package <context>;
+
+service <Entity>Service {
+  // RPC name matches the service interface method name
+  rpc Create<Entity> (Create<Entity>Request) returns (Create<Entity>Response);
+  rpc Get<Entity> (Get<Entity>Request) returns (Get<Entity>Response);
+  rpc List<Entity>s (List<Entity>sRequest) returns (List<Entity>sResponse);
+  rpc Delete<Entity> (Delete<Entity>Request) returns (Delete<Entity>Response);
+}
+
+message Create<Entity>Request {
+  string scope_id = 1;   // Always first — tenant/project isolation
+  string name = 2;
+  string description = 3;
+}
+
+message Create<Entity>Response {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string created_at = 4;  // RFC3339 string
+}
+
+// Error mapping:
+// - InvalidArgument: validation failures (missing fields, bad format)
+// - NotFound: entity not found OR IDOR attempt (never leak existence)
+// - PermissionDenied: valid auth but wrong role/scope
+// - AlreadyExists: uniqueness violations
+// - FailedPrecondition: business rule violations (e.g., "project is archived")
+```
+
 ## error-response-format
 
 Standard error response structure. All endpoints must use this format so clients can parse errors consistently. The `code` field uses domain-specific constants (not HTTP status text) for programmatic error handling.

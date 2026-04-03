@@ -58,6 +58,23 @@ Create tasks for:
 
 Follow existing codebase conventions. Read the [Error Response Format](patterns.md#error-response-format) pattern in patterns.md when writing this.
 
+## gRPC Endpoint Design (if inter-service communication)
+
+For each gRPC RPC, define:
+- Service name and RPC name
+- Request message fields with types
+- Response message fields with types
+- Error codes (use canonical gRPC status codes)
+
+Write the proto file to `.plan/<feature-slug>/API_DESIGN_GRPC.proto` (not a real proto —
+a design reference for the architect). The scaffolder creates the actual proto file
+at `pkg/<context>/grpc/proto/<context>.proto`.
+
+HTTP and gRPC endpoints that expose the same behavior MUST use the same service
+interface — the only difference is the inbound adapter and the public types.
+
+Read the [gRPC Design Template](patterns.md#grpc-design-template) pattern in patterns.md when writing this.
+
 ## Summary Output
 
 When done, return ONLY a short summary to the orchestrator:

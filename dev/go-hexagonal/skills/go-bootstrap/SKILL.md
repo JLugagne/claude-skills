@@ -53,6 +53,8 @@ For each pattern below, read the corresponding section in [patterns.md](patterns
 - **CI Pipeline** — GitHub Actions with testcontainers
 - **Hooks** — auto-format on edit, build-check before commit
 
+- **Project Map Skeleton** — `docs/project/SKILL.md` (minimal table of contents with the first context) and `docs/project/conventions.md` (patterns established during bootstrap). Context docs are created by go-finish as features arrive.
+
 Key principles:
 - Inbound handlers receive the service **interface** from `domain/services/`, not `*app.App`
 - `main.go` has zero business logic — E2E tests call `Setup()` directly
@@ -60,7 +62,7 @@ Key principles:
 
 ### Install Skill/Agent Suite
 
-Copy all 16 agent files to `.claude/agents/`:
+Copy all 17 agent files to `.claude/agents/`:
 - `go-brainstorm.md` — Problem exploration (approach validation, scope check)
 - `go-pm.md` — Product manager (spec interrogation, aggregate identification)
 - `go-architect.md` — Architecture design (TASKS.md generation)
@@ -76,6 +78,7 @@ Copy all 16 agent files to `.claude/agents/`:
 - `go-finish.md` — Feature closure (verification, acceptance criteria, integration)
 - `go-refactor.md` — Safe refactoring (document, lock, rewrite)
 - `go-product-manager.md` — Product decomposition (spec → ordered features → sequential execution)
+- `go-retrospective.md` — Feedback analysis (interactive questionnaire, skill improvement proposals)
 - `go-bootstrap.md` — This file
 
 ## Verification
@@ -85,12 +88,13 @@ After bootstrapping:
 2. `go test -race ./... -short` — health check test passes
 3. `docker-compose up -d` — infrastructure starts
 4. `curl localhost:<port>/health` — returns `{"status":"ok"}`
-5. `.claude/agents/` has 16 agent files
+5. `.claude/agents/` has 17 agent files
 6. `go-arch-lint check` — zero violations (architectural boundaries enforced)
 7. `make lint-pipeline` — all skills and agents referenced in the pipeline exist
 8. `domain/services/` directory exists (inbound port interfaces)
 9. `domain/repositories/` directory exists (outbound port interfaces)
 10. `pkg/<context>/events/` directory exists (event contracts)
+11. `docs/project/SKILL.md` exists (project map skeleton)
 
 ## After Bootstrap
 

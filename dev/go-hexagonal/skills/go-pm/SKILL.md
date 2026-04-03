@@ -90,6 +90,9 @@ When you assess maturity, tell the user plainly: "Spec maturity: [RED/YELLOW/GRE
 ## Before Reading Code
 
 Before interrogating, quickly scan the codebase to understand:
+0. Read `docs/project/SKILL.md` if it exists — it's a faster overview than scanning
+   the entire codebase. Use it to identify which contexts are relevant to this feature,
+   then read only the detailed docs for those contexts.
 1. Existing domain models (look in `internal/*/domain/`)
 2. Existing repositories and services (look in `internal/*/app/`)
 3. Current API surface (look in `internal/*/inbound/`)

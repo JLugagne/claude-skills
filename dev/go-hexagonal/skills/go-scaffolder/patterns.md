@@ -341,6 +341,56 @@ type NotificationSentEvent struct {
 
 ---
 
+## gRPC Scaffold (if feature has gRPC endpoints)
+
+Create:
+- `pkg/<context>/grpc/proto/<context>.proto` — proto definitions from API design
+- Run `protoc` to generate `<context>.pb.go` and `<context>_grpc.pb.go`
+- `internal/<context>/inbound/grpc/<entity>_handler.go` — handler stub
+- `internal/<context>/inbound/grpc/converters/<entity>.go` — converter stubs
+- Compile-time check: `var _ pb.XxxServiceServer = (*XxxGRPCHandler)(nil)`
+
+Proto file conventions:
+- Package name: `<context>` (e.g., `package scan;`)
+- Service name: `<Entity>Service` (e.g., `service ScanService`)
+- Message names: `<Verb><Entity>Request/Response` (e.g., `CreateScanRequest`)
+- Field numbers are stable — never reuse or renumber
+
+```go
+// internal/<context>/inbound/grpc/<entity>_handler.go
+type XxxGRPCHandler struct {
+    pb.Unimplemented<Entity>ServiceServer
+    svc <entity>.XxxService  // service INTERFACE from domain/services/, NOT *app.App
+}
+
+func NewXxxGRPCHandler(svc <entity>.XxxService) *XxxGRPCHandler {
+    return &XxxGRPCHandler{svc: svc}
+}
+
+// Compile-time check — ensures handler implements the gRPC server interface.
+var _ pb.XxxServiceServer = (*XxxGRPCHandler)(nil)
+
+func (h *XxxGRPCHandler) CreateXxx(ctx context.Context, req *pb.CreateXxxRequest) (*pb.CreateXxxResponse, error) {
+    return nil, status.Errorf(codes.Unimplemented, "not implemented") // TODO: implement
+}
+```
+
+```go
+// internal/<context>/inbound/grpc/converters/<entity>.go
+// Converters translate between proto types (pkg/<context>/grpc/) and domain types.
+// Same pattern as HTTP converters — explicit field mapping, no reflection.
+
+func ToDomainXxx(req *pb.CreateXxxRequest, scopeID types.ScopeID) domain.Xxx {
+    return domain.Xxx{} // TODO: implement
+}
+
+func ToProtoXxx(x domain.Xxx) *pb.XxxResponse {
+    return &pb.XxxResponse{} // TODO: implement
+}
+```
+
+---
+
 ## Inbound Handler Stub
 
 ```go

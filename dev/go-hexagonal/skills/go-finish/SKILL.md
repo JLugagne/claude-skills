@@ -26,11 +26,44 @@ Read the [Acceptance Criteria Check](patterns.md#acceptance-criteria-check) patt
 
 For each item: either point to evidence (test name, command output) or flag it as unverified.
 
+### Step 2b: Update Project Map
+
+Read `docs/project/SKILL.md`. Update:
+1. The context table if a new context was created
+2. The entity/endpoint/event counts for modified contexts
+3. The "Latest Migration" number
+4. The "Recent Features" list (add this feature, keep last 5)
+
+Then read `docs/project/contexts/<context>.md` for each context touched by this feature.
+Update:
+- New entities, fields, or invariants
+- New or modified service interfaces
+- New or modified endpoints
+- New or modified events
+- New migration files
+
+If the context doc doesn't exist, create it following the template above.
+
+Keep updates factual — list what exists, don't interpret. The doc is a map, not a narrative.
+
 ### Step 3: Review Summary Report
 
 Read all `.plan/<feature-slug>/task-*_SUMMARY.md` files and `.plan/<feature-slug>/task-rev-*` (reviewer task files) to produce a concise report:
 
 Read the [Review Summary Report](patterns.md#review-summary-report) pattern in patterns.md when writing this.
+
+### Step 3b: Compile Feedback
+
+Read all `.plan/<feature-slug>/task-*_SUMMARY.md` files. For each task, extract:
+- SPEC_DISPUTE summaries and their resolutions
+- CIRCUIT_BREAK summaries and their resolutions
+- Guardrail findings (from pre-green and post-green eval notes in summaries)
+- Reviewer-created fix tasks (task-rev-* files) and their categories
+
+Write `.feedback/<feature-slug>/feedback.md` following the [Feedback Template](patterns.md#feedback-template).
+
+This is factual compilation, not interpretation. List what happened, not what should change.
+The retrospective agent handles interpretation.
 
 ### Step 4: Plan Artifacts Cleanup
 

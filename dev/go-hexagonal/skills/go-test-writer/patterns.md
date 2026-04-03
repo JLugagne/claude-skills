@@ -141,6 +141,59 @@ func TestAppXxxContract(t *testing.T) {
 
 ---
 
+## gRPC E2E Tests {#grpc-e2e-tests}
+
+Use `google.golang.org/grpc/test/bufconn` for in-process gRPC testing (no real port needed).
+
+```go
+func TestMain(m *testing.M) {
+    ctx := context.Background()
+
+    // Start testcontainers (Postgres, etc.)
+    container, err := startTestContainer(ctx)
+    if err != nil {
+        log.Fatalf("testcontainer: %v", err)
+    }
+
+    // Connect, run migrations, seed data
+    client := connectToContainer(ctx, container)
+    runMigrations(client)
+    seedTestData(client)
+
+    // Create bufconn listener — in-process, no real port needed.
+    // 1MB buffer is sufficient for most test payloads.
+    lis = bufconn.Listen(1024 * 1024)
+
+    // Start gRPC server with real repos (same wiring as production)
+    srv := grpc.NewServer()
+    handler := setupGRPCHandler(client) // wire real repos → app → handler
+    pb.RegisterXxxServiceServer(srv, handler)
+    go srv.Serve(lis)
+
+    // Tests use grpc.Dial with bufconn dialer
+    code := m.Run()
+
+    srv.GracefulStop()
+    container.Terminate(ctx)
+    os.Exit(code)
+}
+
+// bufDialer creates a connection through the in-process listener.
+// Use this with grpc.DialContext in each test.
+func bufDialer(context.Context, string) (net.Conn, error) {
+    return lis.Dial()
+}
+```
+
+gRPC tests MUST cover:
+- Full CRUD lifecycle via gRPC client
+- Error codes: `codes.InvalidArgument`, `codes.NotFound`, `codes.PermissionDenied`
+- IDOR: access scope B's data from scope A's context → `codes.NotFound`
+- Proto field presence: every response field is present and correctly typed
+- Same seed data as HTTP e2e tests — both surfaces test the same domain
+
+---
+
 ## E2E Test Setup (TestMain + Seed) {#e2e-test-setup}
 
 ```go

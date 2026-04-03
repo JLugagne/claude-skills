@@ -41,6 +41,13 @@ You perform a single comprehensive review covering architecture compliance, secu
 - Every inbound/outbound adapter has converters that explicitly map public ↔ domain types
 - No `domain.*` struct should ever be serialized directly to JSON/proto/event — this leaks internal fields
 
+**Protocol Type Boundaries:**
+- HTTP types ONLY in `pkg/<context>/types.go` — never proto types in HTTP responses
+- gRPC types ONLY in `pkg/<context>/grpc/` — never JSON-tagged structs in proto definitions
+- Event types ONLY in `pkg/<context>/events/` — never HTTP or proto types in events
+- No cross-contamination: an HTTP handler must never import from `pkg/<context>/grpc/`
+  and vice versa. Both import from `domain/` through their respective converters.
+
 **Interface Design:**
 - Repository interfaces in `domain/repositories/<entity>/`
 - Minimal interfaces (only methods the app layer needs)

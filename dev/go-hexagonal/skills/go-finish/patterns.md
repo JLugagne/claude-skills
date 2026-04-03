@@ -117,6 +117,62 @@ EOF
 )"
 ```
 
+## feedback-template
+
+Compile pipeline signals from task summaries into a structured feedback file. This is factual compilation — list what happened, don't interpret.
+
+```markdown
+# Feedback: <feature-slug>
+
+## Spec Disputes
+<!-- Resolutions of SPEC_DISPUTE during this feature -->
+
+### Dispute 1: [short title]
+- **Trigger:** go-dev task-N disagreed with test expectation on [behavior]
+- **Ruling:** [test correct | dev correct | spec gap]
+- **Root cause:** [e.g., "PM didn't ask about pagination behavior"]
+- **Spec change:** [what was added/modified in FEATURE.md, or "none"]
+- **Corrective tasks created:** [task IDs, or "none — dev retried with clarification"]
+
+## Circuit Breaks
+<!-- CIRCUIT_BREAK events during this feature -->
+
+### Break 1: [short title]
+- **Agent:** [go-dev | go-test-writer | go-scaffolder]
+- **Task:** task-N — [title]
+- **Error:** [one-line error summary]
+- **Resolution:** [go-fixer fixed | go-debugger found root cause | escalated to user]
+- **Root cause:** [e.g., "missing import path in scaffolder output"]
+- **Fix applied:** [what was changed]
+
+## Guardrail Findings
+<!-- Issues detected by the Haiku pre/post green evals -->
+
+### Finding 1: [short title]
+- **Phase:** [pre-green | post-green]
+- **Task:** task-N
+- **Issue:** [e.g., "IDOR: FindByID query missing tenant_id filter"]
+- **Caught before implementation:** [yes/no]
+- **Impact:** [e.g., "would have been caught by reviewer anyway" | "would have reached production"]
+
+## Reviewer Issues
+<!-- Issues found by go-reviewer that generated corrective tasks -->
+
+### Issue 1: [short title]
+- **Category:** [architecture | security | data | performance | compatibility]
+- **Description:** [what was wrong]
+- **Fix tasks created:** [task IDs]
+- **Could this have been prevented earlier?** [e.g., "yes — if scaffolder enforced scope param order"]
+
+## Metrics
+- Total tasks: N
+- Circuit breaks: N (N% of tasks)
+- Spec disputes: N
+- Guardrail catches: N pre-green, N post-green
+- Reviewer issues: N
+- go-arch-lint violations caught: N
+```
+
 ## discard-confirmation
 
 Require explicit typed confirmation before destroying work. List exactly what will be lost so the user makes an informed decision.

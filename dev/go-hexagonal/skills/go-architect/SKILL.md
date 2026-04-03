@@ -35,6 +35,10 @@ Read `.plan/<feature-slug>/FEATURE.md` to understand what needs to be built.
 
 ### Step 2: Analyze Current Codebase
 
+Before scanning files, read `docs/project/SKILL.md` and the relevant context docs.
+This gives you the entity inventory, migration numbers, and patterns without reading
+every file. Only scan source files for details the doc doesn't cover.
+
 Read the relevant parts of the codebase to understand:
 - Existing domain models and their relationships
 - Existing repository interfaces and patterns
@@ -121,6 +125,13 @@ Review tasks may produce NEW task files appended to `.plan/<feature-slug>/TASKS.
 6. **Inbound layer** (converters) red-green pairs next
 7. **E2E API tests** at the end — these are the most important quality gate
 8. **Data review** runs after all green tasks that touch the data layer (databases, queues, caches)
+
+When a feature has both HTTP and gRPC endpoints:
+- Scaffold creates BOTH `inbound/http/` and `inbound/grpc/` handler stubs + proto file
+- Red tasks for HTTP and gRPC e2e tests can run in parallel (different files)
+- Green tasks for HTTP handlers and gRPC handlers can run in parallel IF they
+  don't share `init.go` wiring — otherwise sequential
+- Proto generation (`protoc`) is part of the scaffold task, not a separate task
 
 ## Parallel Safety
 

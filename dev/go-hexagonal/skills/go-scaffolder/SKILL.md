@@ -110,13 +110,25 @@ You create the initial scaffolding for a feature. After your work, the project c
 
 ## Pre-Creation Validation
 
-Before creating any files, verify the task manifest paths follow the hexagonal layout:
+Before creating any files, verify the task manifest paths follow the hexagonal layout. If ANY rule below is violated, **stop and report the deviation to the orchestrator**. Do not create files in the wrong location.
 
-- **Inbound paths** must use `inbound/<adapter>/` (e.g., `inbound/http/`, `inbound/mcp/`, `inbound/grpc/`). If any path uses flat `inbound/handlers/` or `inbound/converters/` (without a protocol subdirectory), stop and report the deviation to the orchestrator. Do not create files in the wrong location.
-- **Outbound paths** must use `outbound/<adapter>/` (e.g., `outbound/bbolt/`, `outbound/postgres/`). If any path uses flat `outbound/repos/` or `outbound/repositories/`, stop and report.
-- **Mock/test double paths** must use `domain/<port>/<porttest>/contract.go` for all domain port test doubles (mocks, test adapters, contract test functions). If any path uses `outbound/mock/`, flat `domain/mocks.go`, or places mock structs outside the per-port `<porttest>/` package, stop and report. This applies to all domain ports: repositories, services, stream sources, event emitters, tool handlers, etc.
+### Path rules
 
-This catches architect layout errors before files are created in wrong locations.
+- **Repository port paths** must use `domain/repositories/<entity>/<entity>.go` for interfaces and `domain/repositories/<entity>/<entity>test/contract.go` for mocks + contracts. NEVER create `domain/ports/`, `domain/ports/repository.go`, or a flat `domain/ports/repositorytest/` package. The correct structure is one package per entity under `domain/repositories/`.
+- **Service port paths** must use `domain/services/<entity>/<entity>.go` for interfaces and `domain/services/<entity>/<entity>test/contract.go` for mocks + contracts. NEVER create flat `domain/services/service.go` or skip service interfaces entirely. Every feature that has inbound handlers MUST have corresponding service interfaces — they are not optional.
+- **Other port paths** must use `domain/<port>/<porttest>/contract.go` for non-repository, non-service ports (stream sources, event emitters, tool handlers, etc.). NEVER use `outbound/mock/`, flat `domain/mocks.go`, or place mock structs outside the per-port `<porttest>/` package.
+- **Inbound paths** must use `inbound/<adapter>/` (e.g., `inbound/http/`, `inbound/mcp/`, `inbound/grpc/`). NEVER use flat `inbound/handlers/` or `inbound/converters/` without a protocol subdirectory.
+- **Outbound paths** must use `outbound/<adapter>/` (e.g., `outbound/bbolt/`, `outbound/postgres/`). NEVER use flat `outbound/repos/` or `outbound/repositories/`.
+
+### Convention rules
+
+- **Typed IDs**: every entity ID field must use a typed ID (`type XxxID string` with `func NewXxxID() XxxID`), not plain `string`. If the task manifest includes entity IDs as plain strings, stop and report. Typed IDs prevent passing UserID where ProjectID is expected — the compiler catches it.
+- **Domain errors** must use `domainerror.New(code, message)` pattern from `domain/errors/`. NEVER define errors as simple `var ErrX = errors.New("...")` sentinels. The structured error pattern carries machine-readable codes that inbound adapters map to HTTP/gRPC status codes.
+- **Mock method pattern**: every mock struct must have function-type fields (`XxxFunc`), and every method must panic with `"called not defined XxxFunc"` if the field is nil. NEVER create mocks that return zero values silently — they hide unwired tests. Every mock must include a compile-time interface check: `var _ Interface = (*Mock)(nil)`.
+- **Contract tests**: every repository interface and service interface MUST have a corresponding contract test function (`XxxContractTesting`) in the `<entity>test/` package. Contract tests are not optional — they are the bridge between mock-based unit tests and real adapter integration tests, proving both behave identically. The scaffold creates the contract function shells with `t.Skip("TODO: waiting for red")`.
+- **Wiring**: new repositories and services MUST be wired in `internal/<context>/init.go`. NEVER put wiring in `cmd/` or `main.go`. init.go is the single composition root.
+
+This catches architect layout errors and convention violations before files are created.
 
 ## Verification
 

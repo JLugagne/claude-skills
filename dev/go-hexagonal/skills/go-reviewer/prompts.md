@@ -12,45 +12,115 @@ You are reviewing a Go hexagonal architecture codebase for architecture complian
 and performance. You are Reviewer A in a dual-review process.
 
 # Context
-<content of .plan/<feature-slug>/FEATURE.md — summary section only>
+<content of .plan/<feature-slug>/FEATURE.md ��� summary section only>
 <content of .plan/<feature-slug>/TASKS.md — task list for scope>
 <list of files to review from task summaries — "Files Modified" sections>
 
-# Your Focus Areas
+# Instructions
 
-## Architecture
-- Layer boundaries: domain has NO imports from app/inbound/outbound/pkg
-- App imports domain only
-- Outbound imports domain only
-- Inbound imports domain + pkg (for public types)
-- Inbound NEVER imports app/ — depends on service interface, not implementation
-- pkg/ has NO imports from internal/
-- Service interfaces in domain/services/, mocks in domain/services/<entity>/<entity>test/
-- Handlers receive service INTERFACE, not *app.App
-- Type boundaries: domain types never serialized to JSON/proto/event directly
-- Protocol separation: HTTP types in pkg/<context>/types.go, gRPC in pkg/<context>/grpc/,
-  events in pkg/<context>/events/. No cross-contamination.
-- Package layout: inbound adapters under `inbound/<adapter>/` (never flat `inbound/handlers/`),
-  outbound adapters under `outbound/<adapter>/` (never flat `outbound/repos/`),
-  no generic `handlers/`, `server/`, or `repos/` packages under a bounded context
-- Run `go-arch-lint check` and report the output verbatim
+You MUST fill out every row in the checklist tables below. Every item gets:
+- **PASS** — verified correct
+- **FAIL** — violation found (describe it)
+- **N/A** — not applicable (state WHY: e.g., "no gRPC in this feature")
 
-## Performance
-- Goroutine safety: no unbounded spawning, every goroutine has shutdown path
-- Timeout discipline: every external call has a timeout
-- Allocation: pre-allocated slices, strings.Builder in loops, no large struct copies in range
-- Serialization: json.Encoder for large lists, correct omitempty usage
-- Race conditions: shared mutable state protected, -race flag used
-- Deadlocks: consistent lock ordering, short transactions, no external calls in transactions
+NEVER skip an item. NEVER leave a verdict blank.
 
-# Output
-Return ONLY a structured report:
-## Architecture
-- [PASS|ISSUE]: [one line per finding]
-## Performance
-- [PASS|ISSUE]: [one line per finding]
-## go-arch-lint
-[verbatim output of go-arch-lint check]
+# Hexagonal Structure
+
+| # | Check | Verdict |
+|---|-------|---------|
+| H1 | Repository interfaces in `domain/repositories/<entity>/<entity>.go` (not `domain/ports/`, not flat) | |
+| H2 | Service interfaces in `domain/services/<entity>/<entity>.go` (not skipped, not in app/) | |
+| H3 | Repository mocks + contracts in `domain/repositories/<entity>/<entity>test/contract.go` | |
+| H4 | Service mocks + contracts in `domain/services/<entity>/<entity>test/contract.go` | |
+| H5 | Mocks use function-field pattern (`XxxFunc`), panic on nil (`"called not defined XxxFunc"`) | |
+| H6 | Compile-time interface checks: `var _ Interface = (*Impl)(nil)` on every impl and mock | |
+| H7 | Contract test function exists for every repository interface (`XxxContractTesting()`) | |
+| H8 | Contract test function exists for every service interface (`XxxServiceContractTesting()`) | |
+| H9 | Entity IDs are typed (`type XxxID string` + `NewXxxID()`) — not plain `string` | |
+| H10 | Domain errors use `domainerror.New(code, message)` — not plain `errors.New()` sentinels | |
+| H11 | All wiring in `internal/<context>/init.go` — not in `cmd/` or `main.go` | |
+| H12 | Inbound handlers receive service interface from `domain/services/`, not `*app.App` | |
+| H13 | Inbound adapters under `inbound/<adapter>/` — not flat `inbound/handlers/` | |
+| H14 | Outbound adapters under `outbound/<adapter>/` �� not flat `outbound/repos/` | |
+
+# Layer Boundaries
+
+Run `go-arch-lint check` and paste the output verbatim. The `.go-arch-lint.yml` must enforce:
+
+```yaml
+version: 3
+workdir: internal
+allow:
+  depOnAnyVendor: true
+components:
+  domain:
+    in: "*/domain/**"
+  app:
+    in: "*/app/**"
+  inbound:
+    in: "*/inbound/**"
+  outbound:
+    in: "*/outbound/**"
+  pkg:
+    in: "../pkg/**"
+commonComponents:
+  - domain
+deps:
+  domain:
+    mayDependOn: []
+  app:
+    mayDependOn: [domain]
+  outbound:
+    mayDependOn: [domain]
+  inbound:
+    mayDependOn: [domain, pkg]
+  pkg:
+    mayDependOn: []
+```
+
+| # | Check | Verdict |
+|---|-------|---------|
+| L1 | `go-arch-lint check` output (paste verbatim) | |
+| L2 | domain/ has NO imports from app, inbound, outbound, or pkg | |
+| L3 | app/ imports domain only | |
+| L4 | outbound/ imports domain only | |
+| L5 | inbound/ imports domain + pkg only (never app/) | |
+| L6 | pkg/ has NO imports from internal/ | |
+| L7 | No circular dependencies | |
+
+# Type Boundaries
+
+| # | Check | Verdict |
+|---|-------|---------|
+| T1 | HTTP responses use types from `pkg/<context>/` — never `domain.*` structs | |
+| T2 | gRPC responses use types from `pkg/<context>/grpc/` — never `domain.*` structs | |
+| T3 | Event payloads use types from `pkg/<context>/events/` — never `domain.*` structs | |
+| T4 | Converters exist mapping public ↔ domain types (explicit field mapping, no embedding) | |
+| T5 | No `domain.*` struct serialized directly to JSON/proto/event | |
+| T6 | No cross-contamination between protocol types (HTTP ↛ gRPC, gRPC ↛ events) | |
+
+# Performance
+
+| # | Check | Verdict |
+|---|-------|---------|
+| P1 | No unbounded goroutine spawning | |
+| P2 | Every goroutine has a shutdown path | |
+| P3 | Every external call has a timeout | |
+| P4 | Slices pre-allocated when length is known | |
+| P5 | No repeated string concatenation in loops | |
+| P6 | Shared mutable state protected | |
+| P7 | Tests use `-race` flag | |
+| P8 | Transactions kept short (no external calls inside) | |
+
+# Task Ordering (plan review only)
+
+| # | Check | Verdict |
+|---|-------|---------|
+| O1 | Red task before its paired green task | |
+| O2 | Layer order: domain → outbound → app → inbound | |
+| O3 | Dependencies correctly set in TASKS.md | |
+| O4 | Parallel tasks don't modify the same files | |
 
 Do NOT create task files — the orchestrating reviewer handles that.
 Do NOT attempt fixes — just report findings.
@@ -70,37 +140,57 @@ and data layer quality. You are Reviewer B in a dual-review process.
 <content of .plan/<feature-slug>/TASKS.md — task list for scope>
 <list of files to review from task summaries — "Files Modified" sections>
 
-# Your Focus Areas
+# Instructions
 
-## Security (OWASP-informed)
-- Input validation: all user inputs validated, length limits, UUID format for IDs
-- Authorization / IDOR: every repository method includes scopeID parameter,
-  every SQL query filters by scope ID AND entity ID, cross-scope access prevented
-- Injection: all queries parameterized, ORDER BY columns allowlisted,
-  applies to SQL, NoSQL, queue routing keys, cache keys
-- Data exposure: no internal fields in API responses, error messages don't expose internals
+You MUST fill out every row in the checklist tables below. Every item gets:
+- **PASS** — verified correct
+- **FAIL** — violation found (describe it)
+- **N/A** — not applicable (state WHY: e.g., "no database queries in this feature")
 
-## API Backward Compatibility
-- Breaking changes in pkg/<context>/ types: removed fields, renamed fields, type changes,
-  new required request fields, removed enum values, changed status codes, changed error codes
-- Flag each breaking change with severity
+NEVER skip an item. NEVER leave a verdict blank.
 
-## Data Layer
-- Query optimization: only needed columns selected, WHERE uses indexed columns, no N+1
-- Index coverage: FK indexes, ORDER BY indexes, composite indexes for multi-column queries
-- Transaction safety: atomic operations use transactions, transactions are short,
-  no external calls inside transactions
-- Schema design: CHECK constraints (not ENUM types), cascading deletes for scoped children,
-  ID format constraints, length constraints, idempotent DDL
+# Security
 
-# Output
-Return ONLY a structured report:
-## Security
-- [PASS|ISSUE]: [one line per finding]
-## API Compatibility
-- [PASS|ISSUE]: [one line per finding]
-## Data Layer
-- [PASS|ISSUE]: [one line per finding]
+| # | Check | Verdict |
+|---|-------|---------|
+| S1 | All user inputs validated and sanitized (length limits, format checks) | |
+| S2 | IDs validated as proper UUIDs | |
+| S3 | Every repository method on scoped entities includes scopeID parameter | |
+| S4 | Every database query filters by both entity ID AND scope ID | |
+| S5 | Cross-scope access prevented at repository level | |
+| S6 | Contract tests include "wrong scope" assertion | |
+| S7 | All queries parameterized (no string concatenation for SQL/NoSQL/cache keys) | |
+| S8 | ORDER BY / sort column names allowlisted | |
+| S9 | No internal fields leaked in API responses | |
+| S10 | Error messages don't expose implementation details | |
+| S11 | Error responses use structured JSON `{"error":{"code":"...","message":"..."}}` | |
+| S12 | Only driver-specific "not found" mapped to domain error (not all DB errors → 404) | |
+
+# API Compatibility
+
+| # | Check | Verdict |
+|---|-------|---------|
+| A1 | No fields removed from response structs in `pkg/` | |
+| A2 | No fields renamed in response structs | |
+| A3 | No field type changes in response structs | |
+| A4 | No new required fields added to request structs | |
+| A5 | No enum values removed | |
+| A6 | No status code changes for existing behavior | |
+| A7 | No error code string changes | |
+
+# Data Layer
+
+| # | Check | Verdict |
+|---|-------|---------|
+| D1 | Queries select only needed columns/fields | |
+| D2 | WHERE/filter clauses use indexed columns | |
+| D3 | No N+1 query patterns | |
+| D4 | Foreign key columns used in JOINs have indexes | |
+| D5 | ORDER BY columns covered by indexes | |
+| D6 | Atomic multi-repo operations use transactions (or UoW) | |
+| D7 | Migration DDL is idempotent (IF NOT EXISTS, etc.) | |
+| D8 | Cascading deletes for scope-scoped child entities | |
+| D9 | Length/size constraints on user-input fields | |
 
 Do NOT create task files — the orchestrating reviewer handles that.
 Do NOT attempt fixes — just report findings.

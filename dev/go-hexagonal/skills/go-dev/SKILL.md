@@ -35,6 +35,19 @@ Read the [Outbound Layer — Repository Adapter](patterns.md#outbound-layer--rep
 
 Read the [App Layer — Service Method](patterns.md#app-layer--service-method) pattern in patterns.md when creating this.
 
+### Wiring (init.go)
+
+If your green task creates new repositories, services, or handlers, you MUST update `internal/<context>/init.go` to wire them. init.go is the single composition root — the ONLY place where concrete types are connected:
+
+1. Create outbound adapters (repository implementations)
+2. Create app service with repository injections
+3. Create inbound handlers with service **interface** injections (NOT `*app.App`)
+4. Register handler routes
+
+If init.go isn't updated, the feature won't be accessible from HTTP/gRPC/AMQP endpoints even though all tests pass locally (they use mocks, not the real wiring).
+
+Read the [Wiring (init.go)](patterns.md#wiring-initgo) pattern in patterns.md when updating this. NEVER put wiring in `cmd/` or `main.go`.
+
 ### Unit of Work (multi-repo atomic operations)
 
 When the app service must modify multiple repositories atomically, use the UoW interface from the domain layer. The outbound adapter provides the real implementation using database transactions (or saga/outbox for multi-store).

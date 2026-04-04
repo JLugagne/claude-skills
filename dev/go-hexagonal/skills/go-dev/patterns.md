@@ -175,6 +175,40 @@ func (u *unitOfWork) Do(ctx context.Context, fn func(ctx context.Context, repos 
 
 ---
 
+## Wiring (init.go)
+
+When your green task creates new repositories or services, update `internal/<context>/init.go`:
+
+```go
+// internal/<context>/init.go
+//
+// This is the composition root. The ONLY place that imports outbound adapter packages.
+// main.go calls Setup() and starts the server — it never imports adapters directly.
+
+func Setup(pool *pgxpool.Pool) (*Server, error) {
+    // 1. Outbound adapters — concrete implementations of repository interfaces.
+    xxxRepo := pg.NewXxxRepository(pool)
+
+    // 2. App service — implements the service interface from domain/services/.
+    //    Receives repository INTERFACES, not concrete adapters.
+    xxxApp := app.New(xxxRepo)
+
+    // 3. Inbound handlers — receive the service INTERFACE, not *app.App.
+    //    xxxApp satisfies XxxService because of the compile-time check in app/.
+    xxxHandler := http.NewXxxHandler(xxxApp)
+
+    // 4. Register routes — connect HTTP paths to handler methods.
+    xxxHandler.RegisterRoutes(r)
+}
+```
+
+**Rules:**
+- NEVER put wiring in `cmd/` or `main.go` — init.go is the single composition root.
+- Handlers receive the service **interface** from `domain/services/`, not `*app.App`.
+- If init.go isn't updated, the feature compiles and tests pass (locally mocked) but the feature won't be accessible from endpoints.
+
+---
+
 ## Inbound Layer — Converters
 
 ```go

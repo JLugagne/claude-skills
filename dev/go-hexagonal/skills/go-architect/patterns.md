@@ -24,8 +24,13 @@ internal/<context>/
                                      # Examples: domain/streamsource/streamsourcetest/, domain/toolhandler/toolhandlertest/
                                      # NEVER use outbound/mock/ or flat domain/mocks.go — all domain port
                                      # test doubles live in domain/<port>/<porttest>/.
-    domain/service/                  # Domain service interfaces — only needed when business logic
-                                     # spans multiple entities and doesn't belong to a single entity's methods.
+    domain/services/<entity>/         # Inbound port interfaces (service contracts).
+                                     # One package per entity, same as repositories.
+                                     # App layer implements these; inbound handlers depend on them.
+                                     # NEVER import app/ from inbound — use the service interface.
+    domain/services/<entity>/<entity>test/  # Mock structs + reusable contract test functions.
+                                     # Same pattern as repository mocks: function-based with panic on unset.
+                                     # Contract tests are called by both handler unit tests and app integration tests.
     domain/uow/                      # Unit of Work interface (transaction boundary).
                                      # Lives in domain because it's a PORT — the app layer depends on
                                      # the interface, and outbound provides the implementation.
@@ -199,6 +204,21 @@ func (a *App) TransferOwnership(ctx context.Context, projectID, newOwnerID types
 - Red-green pairs must be 1:1. Every red task has exactly one green partner.
 - Advisors depend on the tasks they review. Place them after the relevant green tasks.
 - Keep task titles short but descriptive. The title appears in logs and status reports.
+
+**Scaffold task (task-1) MUST include all of these — none are optional:**
+- Domain types + typed IDs (`type XxxID string`, `func NewXxxID() XxxID`)
+- Domain errors using `domainerror.New(code, message)` — never plain sentinels
+- Repository interfaces in `domain/repositories/<entity>/<entity>.go`
+- Repository mocks + contract function shells in `domain/repositories/<entity>/<entity>test/contract.go`
+- Service interfaces in `domain/services/<entity>/<entity>.go` — every feature with inbound handlers needs these
+- Service mocks + contract function shells in `domain/services/<entity>/<entity>test/contract.go`
+- App service stubs implementing the service interfaces (with compile-time check)
+- Converter stubs
+- Migration/schema placeholders
+- init.go wiring updates
+- Compile-time interface checks on every implementation: `var _ Interface = (*Impl)(nil)`
+
+Service interfaces are NOT optional. Without them, inbound handlers import `*app.App` directly, violating the hexagonal boundary and making handlers untestable without the full app.
 
 ---
 

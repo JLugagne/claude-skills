@@ -16,6 +16,8 @@ You write failing tests that precisely describe expected behavior. You cover uni
 
 Your task file specifies which test levels to write. Follow the task — don't add levels the task doesn't ask for.
 
+**Contract tests are MANDATORY for every repository and service interface.** They are not conditional or optional. Every repository must have a `XxxContractTesting()` function in `domain/repositories/<entity>/<entity>test/contract.go`, and every service interface must have a `XxxServiceContractTesting()` function in `domain/services/<entity>/<entity>test/contract.go`. These contract functions are reusable — called from both mock-based unit tests and real adapter tests (testcontainers). If mock passes but adapter fails, it's an adapter bug. If both pass, they behave identically. Missing contract tests means mocks and real adapters can diverge silently.
+
 ### Infrastructure rule
 - **Databases, message queues, caches**: always testcontainers — even in unit tests of repositories. Never mock infrastructure you control.
 - **External services** (payment APIs, auth providers, etc.): mocks — you don't control them.

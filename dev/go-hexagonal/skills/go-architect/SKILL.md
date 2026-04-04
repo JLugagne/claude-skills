@@ -173,16 +173,43 @@ This is not optional. The scoping rule is the single most important security pro
 
 ## Scaffolding Task Details
 
-The scaffolding task (`task-1`) creates:
-- Domain types and typed IDs (`type XxxID string`, `func NewXxxID() XxxID`)
-- Repository interfaces with all method signatures
-- Mock structs with function-based pattern (panic on unset: `"called not defined XxxFunc"`)
-- Contract test function shells with `t.Skip("TODO: waiting for red")`
-- App layer method stubs returning zero values
-- Converter stubs
+The scaffolding task (`task-1`) creates ALL of the following — none are optional:
+
+**Domain layer:**
+- Typed IDs: `type XxxID string` with `func NewXxxID() XxxID` — never plain `string`
+- Domain errors: `domainerror.New(code, message)` — never plain sentinels
+- Domain models with typed ID fields
+
+**Repository layer (outbound ports):**
+- Repository interfaces at `domain/repositories/<entity>/<entity>.go` — NEVER `domain/ports/`
+- Mock structs + contract function shells at `domain/repositories/<entity>/<entity>test/contract.go`
+- Mocks use function-based pattern with panic on unset: `"called not defined XxxFunc"`
+- Compile-time interface check: `var _ Interface = (*Mock)(nil)`
+
+**Service layer (inbound ports):**
+- Service interfaces at `domain/services/<entity>/<entity>.go` — NEVER skipped
+- Mock structs + contract function shells at `domain/services/<entity>/<entity>test/contract.go`
+- Same mock pattern as repositories (function-based, panic on unset, compile-time check)
+- Inbound handlers will depend on these interfaces, not `*app.App`
+
+**App layer:**
+- App implements the service interfaces (with compile-time check: `var _ XxxService = (*App)(nil)`)
+- Method stubs returning zero values
+
+**Outbound adapters:**
+- Repository implementation stubs with compile-time interface checks
 - Migration/schema file placeholders
+
+**Inbound adapters:**
+- Handler stubs receiving service interface (not `*app.App`)
+- Converter stubs
+
+**Wiring:**
+- `internal/<context>/init.go` updated to wire new repos → app → handlers
+
+**Tests:**
+- All test functions start with `t.Skip("TODO: waiting for red")`
 - Security test stubs with `t.Skip("TODO: waiting for security-advisor red")`
-- Compile-time interface checks: `var _ Interface = (*Impl)(nil)`
 
 After scaffolding: `go build ./...` passes, `go test ./...` shows all new tests as SKIP.
 
@@ -234,3 +261,6 @@ When in doubt, use **sonnet**. It's better to slightly overspend on a task than 
 - In "Relevant Code Files", only reference files that already exist. Pointing a subagent at a nonexistent file wastes time on a failed read and confuses the agent about what patterns to follow. Use existing similar files as examples instead.
 - Advisors append new tasks to TASKS.md rather than modifying existing ones in-place. This lets the orchestrator discover new work by re-reading the file.
 - Follow the codebase's existing conventions for migration numbering, domain errors (`domainerror.New`), mocks (function-based with panic on unset), and contract tests (reusable functions). Consistency means the subagents can pattern-match from the examples you give them.
+- NEVER design tasks that use `domain/ports/` — the correct structure is `domain/repositories/<entity>/` for outbound ports and `domain/services/<entity>/` for inbound ports, one package per entity.
+- NEVER design tasks that skip service interfaces — every feature with inbound handlers needs them.
+- NEVER design tasks that put wiring in `cmd/` or `main.go` — all wiring goes in `internal/<context>/init.go`.

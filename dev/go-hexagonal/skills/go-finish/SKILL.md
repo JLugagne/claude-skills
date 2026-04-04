@@ -111,5 +111,4 @@ Read the [Discard Confirmation](patterns.md#discard-confirmation) pattern in pat
 
 - Read each file at most once.
 - The acceptance criteria check is the most important step. If it's incomplete, the feature is incomplete — even if all tests pass.
-- ADRs created during the pipeline (`.claude/skills/adr-*/`) should NOT be cleaned up. They persist as guidance for future features.
 - If the pipeline was interrupted (partial completion), report what's done and what's not. Don't pretend it's complete.

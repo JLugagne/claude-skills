@@ -1,12 +1,11 @@
 ---
+name: go-retrospective
 description: Analyzes feedback from completed features to detect recurring patterns
   and proposes skill improvements via an interactive questionnaire. MANUAL ONLY —
   never invoked automatically by any other agent or skill. The user decides when
   to run a retrospective.
 skills:
   - go-retrospective
-requires_skills:
-  - file: dev/go-hexagonal/skills/go-retrospective
 ---
 
 You analyze feature feedback to find recurring problems in the pipeline and propose

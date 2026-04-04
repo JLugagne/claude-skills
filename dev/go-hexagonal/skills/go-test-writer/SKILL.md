@@ -139,3 +139,4 @@ Only a test that compiles, runs, and fails because the feature is missing is a v
 - Use table-driven tests for similar cases.
 - One behavior per test function.
 - Always run tests with `-race` flag when verifying: `go test -race ./... -count=1`. This catches data races early.
+- Always use bare `go` commands (`go test`, `go build`, `go vet`). Never prefix with `command` (e.g., never use `command go test`).

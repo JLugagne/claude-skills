@@ -30,6 +30,9 @@ and performance. You are Reviewer A in a dual-review process.
 - Type boundaries: domain types never serialized to JSON/proto/event directly
 - Protocol separation: HTTP types in pkg/<context>/types.go, gRPC in pkg/<context>/grpc/,
   events in pkg/<context>/events/. No cross-contamination.
+- Package layout: inbound adapters under `inbound/<adapter>/` (never flat `inbound/handlers/`),
+  outbound adapters under `outbound/<adapter>/` (never flat `outbound/repos/`),
+  no generic `handlers/`, `server/`, or `repos/` packages under a bounded context
 - Run `go-arch-lint check` and report the output verbatim
 
 ## Performance

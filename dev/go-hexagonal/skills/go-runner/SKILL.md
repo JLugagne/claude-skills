@@ -41,7 +41,7 @@ On resume, before skipping a `done` task, verify its summary file exists:
 
 ### Step 1: Read the Plan
 
-Read `.plan/<feature-slug>/TASKS.md`. Parse task ID, title, skill, phase, dependencies, status.
+Read `.plan/<feature-slug>/TASKS.md`. Parse task ID, title, skill, phase, model, dependencies, status.
 
 ### Step 2: Find Next Executable Task
 
@@ -64,10 +64,13 @@ For each executable task:
 
 1. Read `.plan/<feature-slug>/task-<id>.md` for the task details
 2. Read each dependency's `.plan/<feature-slug>/task-<dep>_SUMMARY.md` for context
+3. Extract the **Model** from the task file's `## Model` field (or the Model column in TASKS.md)
 
 Read the [Subagent Dispatch Prompt](prompts.md#subagent-dispatch-prompt) in prompts.md for the dispatch template.
 
 **Use `subagent_type` to dispatch.** The agent framework loads the skill automatically — no need to read and inline SKILL.md files.
+
+**MANDATORY: Pass the `model` parameter when calling the Agent tool.** Use the model extracted in step 3. This overrides the skill's frontmatter model. The architect has evaluated each task's complexity — respect the assignment. Default to `sonnet` only if the task has no Model field.
 
 Skill mapping from task files:
 - `go-scaffolder` → subagent_type: `go-scaffolder`

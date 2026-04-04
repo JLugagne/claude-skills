@@ -95,6 +95,20 @@ The codebase already has: [list bounded contexts and key entities from previous 
 Interrogate the spec, write FEATURE.md, plan with go-architect, and execute with go-runner.
 ```
 
+## Status Dual-Write Convention
+
+Feature status MUST be updated in **both** files simultaneously:
+
+1. `.plan/features.json` — canonical source of truth (machine-readable, read by the app)
+2. `.plan/PRODUCT.md` — human-readable mirror (the status table)
+
+`features.json` is written first. Status values: `pending`, `in-progress`, `done`, `blocked`.
+
+**When to update:**
+- Feature starts → set `in-progress` in both files
+- Feature completes (all TASKS.md tasks done) → set `done` in both files **immediately**
+- Never leave a completed feature as `pending` — this blocks dependency resolution for downstream features
+
 ## Progress Report
 
 Use this format after each feature completes.

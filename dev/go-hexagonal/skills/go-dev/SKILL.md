@@ -128,3 +128,4 @@ Do NOT return file contents or full implementation code.
 - Implement only what the tests require. Untested code is unverified code — it may look correct but has no red-phase proof. The security advisor and QA will add tests for additional behavior when needed.
 - Do not add error handling for untested cases. Code without a corresponding test is invisible to the pipeline — it won't be verified, may silently break, and adds maintenance cost with no proven benefit.
 - Follow existing codebase patterns: `fmt.Errorf("verb noun: %w", err)` for wrapping, `strings.TrimSpace()` for sanitization, `time.Now()` for timestamps, driver-specific "not found" error checks. Consistency lets future agents read and extend your code without surprises.
+- Always use bare `go` commands (`go test`, `go build`, `go vet`). Never prefix with `command` (e.g., never use `command go test`).

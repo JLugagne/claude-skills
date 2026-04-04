@@ -63,6 +63,11 @@ an ambiguity worth examining closely.
 - No cross-contamination: an HTTP handler must never import from `pkg/<context>/grpc/`
   and vice versa. Both import from `domain/` through their respective converters.
 
+**Package Layout:**
+- Inbound adapters live under `inbound/<adapter>/` (e.g., `inbound/http/`, `inbound/mcp/`, `inbound/grpc/`) -- never flat `inbound/handlers/`
+- Outbound adapters live under `outbound/<adapter>/` (e.g., `outbound/bbolt/`, `outbound/postgres/`) -- never flat `outbound/repos/`
+- No generic `handlers/`, `server/`, or `repos/` packages under a bounded context
+
 **Interface Design:**
 - Repository interfaces in `domain/repositories/<entity>/`
 - Minimal interfaces (only methods the app layer needs)

@@ -167,9 +167,9 @@ CLAUDE.md is for invariants that apply to every agent in every session.
 For each feature in dependency order:
 
 1. Read `.plan/PRODUCT.md` to get the feature summary
-2. Update the feature status to `in-progress`
+2. Update the feature status to `in-progress` in **both** `.plan/features.json` and `.plan/PRODUCT.md`
 3. Invoke go-pm with `subagent_type: go-pm`. Read the [Feature Dispatch Prompt](patterns.md#feature-dispatch-prompt) in patterns.md for the dispatch template.
-4. When go-pm + go-runner complete the feature, update `.plan/PRODUCT.md` status to `done`
+4. When go-pm + go-runner complete the feature, update the feature status to `done` in **both** `.plan/features.json` (canonical source of truth) and `.plan/PRODUCT.md`. Do this **immediately** — before any progress report or user prompt. A feature is not considered complete until both files reflect `done`.
 5. Verify go-finish has updated `.claude/skills/doc-project/SKILL.md` before proceeding. The next feature's go-pm will read doc-project — it must reflect the completed feature.
 6. Move to the next feature
 

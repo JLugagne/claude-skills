@@ -66,30 +66,40 @@ The API design feeds into:
 
 Reference `.plan/<feature-slug>/API_DESIGN.md` in the relevant task-<id>.md files under "Relevant Code Files".
 
-### Step 2c: Record Architecture Decision Records (ADRs)
+### Step 2c: Record Technical Decisions in doc-project
 
-Every technical or architecture decision made during the design — choice of data structure, storage strategy, API pattern, error handling approach, concurrency model, caching strategy, etc. — gets recorded as a skill-based ADR at `.claude/skills/adr-NNN/SKILL.md`.
+Every technical or architecture decision made during the design — choice of data structure, storage strategy, API pattern, error handling approach, concurrency model, caching strategy, etc. — gets recorded in the relevant bounded context file under `.claude/skills/doc-project/contexts/<context>.md`.
 
-ADRs are skills so that future agents can be guided by past decisions when they encounter related work. The next time someone works on a feature that touches the same domain, the ADR skill triggers and provides context.
+**Do NOT create separate ADR skill files.** All technical decisions live in doc-project to keep knowledge centralized in one place.
 
-**To create or update an ADR:**
+**To record a decision:**
 
-1. Check existing ADRs: look in `.claude/skills/adr-*/SKILL.md` and find the highest number.
-2. For each decision, write `.claude/skills/adr-NNN/SKILL.md` following the ADR template. Read the [ADR Skill Template](patterns.md#adr-skill-template) pattern in patterns.md when creating this.
-3. Register the ADR in `.claude/settings.json` under the `skills` key so it's discoverable.
+1. Identify which bounded context the decision belongs to (project, executor, sidecar, planner, etc.)
+2. Read the existing `.claude/skills/doc-project/contexts/<context>.md` file
+3. Add or update the `## Technical Decisions` section at the bottom of that file
+4. Each decision should include: a descriptive title, the decision and reasoning, consequences, and alternatives rejected
 
-**Examples of decisions that warrant ADRs:**
-- "We use JSONB for agent config instead of separate columns" — affects how all config-like features are stored
-- "Repository interfaces live in domain/repositories/<entity>/, not in the app layer" — affects every new entity
-- "Mocks use function-based pattern with panic on unset" — affects every new test contract
-- "Text CHECK constraints instead of database ENUM types" — affects every new status/type column
-- "ON DELETE CASCADE on all project-scoped FKs" — affects every new project-child table
+**Format for each decision:**
 
-**When to update an existing ADR vs create a new one:**
-- If a new decision refines or extends an existing ADR, update it (add a "Revised" status section with the date and what changed).
-- If a decision contradicts an existing ADR, create a new ADR that supersedes it and update the old one's status to "Superseded by ADR-NNN".
+```markdown
+### [Decision Title]
 
-The `trigger: description` setting means the ADR activates based on its description text — so write descriptions that match the scenarios where a future agent needs this context.
+[What was decided and why — 2-3 paragraphs covering context, decision, and key consequences]
+
+- [Bullet points for specific consequences and constraints]
+
+**Alternatives rejected:**
+- [Alternative]: [why rejected — be specific about the tradeoff]
+```
+
+**Examples of decisions worth recording:**
+- "We use JSONB for agent config instead of separate columns" — affects how config-like features are stored
+- "Sessions are in-memory only, not persisted" — affects how session features are built
+- "Filesystem dual-write for feature persistence" — affects planner storage patterns
+
+**When to update vs add:**
+- If a new decision refines an existing one, update the existing entry
+- If a decision contradicts an existing one, update the old entry to note it's superseded and add the new one
 
 ### Step 3: Write TASKS.md
 
@@ -183,6 +193,38 @@ The separation between QA and dev exists so tests are an independent specificati
 - Dev (green) only touches implementation `.go` files — if dev "fixes" a test to match their implementation, the test loses its value as a contract.
 - Every red task has exactly one paired green task. This 1:1 pairing makes it clear which implementation satisfies which contract.
 - If dev disagrees with a test expectation, it returns `SPEC_DISPUTE:` and the runner escalates to go-pm for arbitration. go-pm reviews the spec, makes a ruling, and invokes go-architect to create corrective tasks. The pipeline self-heals without blocking on the user.
+
+## Model Assignment Guidelines
+
+Each task in TASKS.md and its corresponding task file must include a `Model` field. This controls which model the runner uses to dispatch the subagent. The architect evaluates the complexity of each task and assigns the appropriate model to optimize cost.
+
+### Model tiers
+
+- **haiku** — mechanical, pattern-following work with no ambiguity. The task is fully specified and the agent just needs to replicate an existing pattern.
+  - Scaffolding (stubs, typed IDs, mocks) when the codebase already has clear examples
+  - Simple converter red/green pairs (direct field mapping, no business logic)
+  - Straightforward CRUD repository red/green pairs that follow an existing pattern exactly
+
+- **sonnet** — standard implementation work. The task requires judgment but follows known patterns. This is the default.
+  - Most red/green pairs (domain logic, app services, handlers)
+  - Reviews (go-reviewer)
+  - E2E test writing
+  - Migrations
+
+- **opus** — complex reasoning, novel patterns, or high-stakes decisions. Use sparingly.
+  - Tasks involving complex business rules, concurrency, or race conditions
+  - First-of-a-kind patterns in the codebase (no existing example to follow)
+  - Tasks where getting it wrong would cause subtle, hard-to-detect bugs (security, data integrity)
+  - Spec dispute arbitration (go-pm)
+
+### Decision heuristic
+
+Ask: "Could a junior dev do this by copying an existing file and changing names/fields?"
+- Yes → **haiku**
+- Needs some thinking but patterns exist → **sonnet**
+- Needs architectural reasoning or novel design → **opus**
+
+When in doubt, use **sonnet**. It's better to slightly overspend on a task than to have a weaker model fail and trigger the circuit breaker (which costs more than the savings).
 
 ## Guidelines
 

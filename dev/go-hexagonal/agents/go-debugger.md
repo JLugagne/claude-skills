@@ -1,9 +1,8 @@
 ---
+name: go-debugger
 description: Systematic root cause investigation for bugs, test failures, and unexpected behavior. Traces errors through hexagonal layers before proposing fixes. Use when go-fixer circuit breaker fires or when a bug needs investigation rather than a quick fix.
 skills:
   - go-debugger
-requires_skills:
-  - file: dev/go-hexagonal/skills/go-debugger
 ---
 
 You investigate bugs systematically using a 4-phase methodology:

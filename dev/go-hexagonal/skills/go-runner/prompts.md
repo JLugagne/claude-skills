@@ -48,9 +48,11 @@ You are working on a Go project following hexagonal architecture with red-green 
 — These carry the file manifest: which files were created/modified by earlier tasks.
 — The subagent needs this to know which files to read beyond "Relevant Code Files".
 
-# Skill
+# Skill & Model
 Use subagent_type: <skill-name>
+Use model: <model from the task's "## Model" field, or from the Model column in TASKS.md>
 — The framework loads the skill automatically. Do NOT inline SKILL.md content.
+— The model parameter overrides the skill's frontmatter model. If the task has no Model field, default to sonnet.
 
 # Output
 Return ONLY a short summary:

@@ -108,6 +108,16 @@ You create the initial scaffolding for a feature. After your work, the project c
   }
   ```
 
+## Pre-Creation Validation
+
+Before creating any files, verify the task manifest paths follow the hexagonal layout:
+
+- **Inbound paths** must use `inbound/<adapter>/` (e.g., `inbound/http/`, `inbound/mcp/`, `inbound/grpc/`). If any path uses flat `inbound/handlers/` or `inbound/converters/` (without a protocol subdirectory), stop and report the deviation to the orchestrator. Do not create files in the wrong location.
+- **Outbound paths** must use `outbound/<adapter>/` (e.g., `outbound/bbolt/`, `outbound/postgres/`). If any path uses flat `outbound/repos/` or `outbound/repositories/`, stop and report.
+- **Mock/test double paths** must use `domain/<port>/<porttest>/contract.go` for all domain port test doubles (mocks, test adapters, contract test functions). If any path uses `outbound/mock/`, flat `domain/mocks.go`, or places mock structs outside the per-port `<porttest>/` package, stop and report. This applies to all domain ports: repositories, services, stream sources, event emitters, tool handlers, etc.
+
+This catches architect layout errors before files are created in wrong locations.
+
 ## Verification
 
 After creating all files, run:

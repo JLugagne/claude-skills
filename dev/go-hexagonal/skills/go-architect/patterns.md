@@ -17,6 +17,13 @@ internal/<context>/
                                      # Mocks use function-based pattern (panic on unset) so missing
                                      # expectations fail loudly instead of returning zero values silently.
                                      # Contract tests are called by both unit tests and integration tests.
+    domain/<port>/<port>test/        # Mock structs + contract tests for non-repository, non-service ports.
+                                     # Same pattern as repositories: MockXxx + XxxContractTesting.
+                                     # Use this for any domain port that is neither a repository nor a service:
+                                     # stream sources, event emitters, tool handlers, notifiers, etc.
+                                     # Examples: domain/streamsource/streamsourcetest/, domain/toolhandler/toolhandlertest/
+                                     # NEVER use outbound/mock/ or flat domain/mocks.go — all domain port
+                                     # test doubles live in domain/<port>/<porttest>/.
     domain/service/                  # Domain service interfaces — only needed when business logic
                                      # spans multiple entities and doesn't belong to a single entity's methods.
     domain/uow/                      # Unit of Work interface (transaction boundary).
@@ -26,12 +33,14 @@ internal/<context>/
                                      # Coordinates domain objects and ports. No business logic here —
                                      # only "call repo A, then call repo B, handle errors."
                                      # Dependencies injected via Config struct, not globals.
-    inbound/converters/              # Request/response type converters and validation.
-                                     # Translates between HTTP/API types and domain types.
-                                     # Keeps domain types clean of JSON tags and API concerns.
-    inbound/handlers/                # HTTP/MCP/WS handlers (driving adapters).
+    inbound/<adapter>/               # Protocol-specific handlers (driving adapters).
+                                     # One package per protocol: http/, mcp/, grpc/, ws/, amqp/.
                                      # Thin layer: parse request, call app service, write response.
                                      # All business logic lives in app/ or domain/, never here.
+    inbound/<adapter>/converters/    # Request/response type converters and validation.
+                                     # Translates between protocol-specific types and domain types.
+                                     # Keeps domain types clean of JSON tags and API concerns.
+                                     # Each protocol has its own converters — never shared across adapters.
     outbound/<adapter>/              # Database/queue/cache implementations (driven adapters).
                                      # Implements the repository interfaces from domain/repositories/.
                                      # Each adapter technology gets its own package (e.g., postgres/, redis/).
@@ -43,7 +52,7 @@ internal/<context>/
 **Adaptation notes:**
 - Replace `<context>` with the bounded context name (e.g., `server`, `billing`, `auth`).
 - Replace `<entity>` with the domain entity (e.g., `project`, `notification`, `user`).
-- Replace `<adapter>` with the technology (e.g., `postgres`, `redis`, `rabbitmq`).
+- Replace `<adapter>` with the technology or protocol (e.g., `postgres`, `redis`, `rabbitmq` for outbound; `http`, `mcp`, `grpc`, `ws` for inbound).
 - Not every context needs every directory — only create what the feature requires. Don't scaffold empty packages.
 
 ---
@@ -135,75 +144,6 @@ func (a *App) TransferOwnership(ctx context.Context, projectID, newOwnerID types
 
 ---
 
-## ADR Skill Template
-
-```markdown
----
-name: adr-NNN-<slug>
-# The name must be unique across all ADRs.
-# Use a short, descriptive slug: adr-003-jsonb-config-storage
-
-description: <When to trigger — describe the contexts where this decision is relevant.
-Be specific: mention entity names, patterns, technologies, and scenarios so the ADR
-activates when a future agent works on related code. Example: "When designing storage
-for configuration objects, agent settings, or key-value data in PostgreSQL.">
-# The description is the trigger text — future agents see this ADR when their work
-# matches these keywords. Vague descriptions mean the ADR never fires.
-
-invoke: agent
-trigger: description
-# These two fields are required — they make the ADR a triggerable skill.
-# "invoke: agent" means it runs as an agent context, not a command.
-# "trigger: description" means it activates based on description text matching.
----
-
-# ADR-NNN: <Decision Title>
-<!-- Title should be a clear statement of the decision, not the problem.
-     Good: "Use JSONB for agent configuration storage"
-     Bad: "How to store agent config" -->
-
-## Status
-Accepted
-<!-- Valid statuses: Proposed | Accepted | Superseded by ADR-NNN | Deprecated
-     When superseding, update BOTH the old and new ADR. -->
-
-## Context
-<What problem or question prompted this decision? What constraints existed?
-Include the specific feature or PR that motivated this — future readers need
-to understand WHY this came up, not just what was decided.>
-
-## Decision
-<What was decided and why? Include the reasoning, not just the conclusion.
-The reasoning is the most valuable part — it tells future agents whether
-the decision still applies when constraints change.>
-
-## Alternatives Considered
-- <Alternative 1>: <why rejected — be specific about the tradeoff>
-- <Alternative 2>: <why rejected — "didn't feel right" is not a reason>
-<!-- Every decision has alternatives. If you can't name any, you haven't
-     thought about it enough. Even "do nothing" is an alternative. -->
-
-## Consequences
-- <What this decision enables — concrete benefits>
-- <What this decision constrains — future work that must follow this pattern>
-- <What to watch out for — known risks or edge cases>
-<!-- Be honest about constraints. Future agents need to know what they CAN'T
-     do as a result of this decision, not just what they can. -->
-
-## Applies To
-- <List of file patterns, packages, or domains where this decision applies>
-<!-- Be specific: "internal/server/outbound/postgres/" is better than "database code".
-     These help future agents know if the ADR applies to their current work. -->
-```
-
-**Adaptation notes:**
-- Number sequentially after checking existing ADRs in `.claude/skills/adr-*/SKILL.md`.
-- Write descriptions that match the scenarios where a future agent needs this context. Think about what search terms or file paths would be relevant.
-- Register every new ADR in `.claude/settings.json` under the `skills` key.
-- When updating an existing ADR, add a "Revised" status section with the date and what changed.
-
----
-
 ## TASKS.md Template
 
 ```markdown
@@ -233,22 +173,23 @@ the decision still applies when constraints change.>
      If advisors add tasks later, they get the next available ID.
      The "Depends On" column drives execution order. -->
 
-| ID | Title | Skill | Phase | Depends On | Status |
-|----|-------|-------|-------|------------|--------|
-| task-1 | Scaffold all stubs and interfaces | go-scaffolder | scaffold | — | pending |
-| task-2 | [ADVISOR] Review architecture and security | go-reviewer | advisor | task-1 | pending |
-| task-3 | [RED] Contract tests for XxxRepository | go-test-writer | red | task-1 | pending |
-| task-4 | [GREEN] Implement XxxRepository | go-dev | green | task-3 | pending |
-| task-5 | [RED] App layer tests for XxxService | go-test-writer | red | task-4 | pending |
-| task-6 | [GREEN] Implement XxxService | go-dev | green | task-5 | pending |
-| task-7 | [RED] Converter tests | go-test-writer | red | task-1 | pending |
-| task-8 | [GREEN] Implement converters | go-dev | green | task-7 | pending |
-| task-9 | [RED] E2E API tests | go-test-writer | red | task-6,task-8 | pending |
-| task-10 | [GREEN] Implement HTTP handlers | go-dev | green | task-9 | pending |
-| task-11 | [ADVISOR] Review queries, indexes, and data layer | go-reviewer | advisor | task-4,task-10 | pending |
-| task-12 | [MIGRATION] Data migration (if needed) | go-migrator | migration | task-4 | pending |
+| ID | Title | Skill | Phase | Model | Depends On | Status |
+|----|-------|-------|-------|-------|------------|--------|
+| task-1 | Scaffold all stubs and interfaces | go-scaffolder | scaffold | sonnet | — | pending |
+| task-2 | [ADVISOR] Review architecture and security | go-reviewer | advisor | sonnet | task-1 | pending |
+| task-3 | [RED] Contract tests for XxxRepository | go-test-writer | red | sonnet | task-1 | pending |
+| task-4 | [GREEN] Implement XxxRepository | go-dev | green | sonnet | task-3 | pending |
+| task-5 | [RED] App layer tests for XxxService | go-test-writer | red | sonnet | task-4 | pending |
+| task-6 | [GREEN] Implement XxxService | go-dev | green | sonnet | task-5 | pending |
+| task-7 | [RED] Converter tests | go-test-writer | red | sonnet | task-1 | pending |
+| task-8 | [GREEN] Implement converters | go-dev | green | sonnet | task-7 | pending |
+| task-9 | [RED] E2E API tests | go-test-writer | red | sonnet | task-6,task-8 | pending |
+| task-10 | [GREEN] Implement HTTP handlers | go-dev | green | sonnet | task-9 | pending |
+| task-11 | [ADVISOR] Review queries, indexes, and data layer | go-reviewer | advisor | sonnet | task-4,task-10 | pending |
+| task-12 | [MIGRATION] Data migration (if needed) | go-migrator | migration | sonnet | task-4 | pending |
 <!-- Phase tags: scaffold, red, green, advisor, migration
      Skill must match an available go-* skill name exactly.
+     Model: haiku, sonnet, or opus — see "Model Assignment Guidelines" in SKILL.md.
      Status: pending | in-progress | done | failed | skipped
      Dependencies are comma-separated task IDs (no spaces after comma). -->
 ```
@@ -272,6 +213,9 @@ the decision still applies when constraints change.>
 
 ## Phase: [scaffold|red|green|advisor]
 <!-- scaffold = create stubs, red = write failing tests, green = make tests pass, advisor = review -->
+
+## Model: [haiku|sonnet|opus]
+<!-- The runner dispatches this task with this model. See "Model Assignment Guidelines" in go-architect SKILL.md. -->
 
 ## Depends On: [task-X, task-Y]
 <!-- The runner won't start this task until all dependencies are "done".

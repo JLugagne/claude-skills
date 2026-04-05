@@ -7,7 +7,7 @@ Templates for go-reviewer to use when dispatching sub-reviewers.
 Use this when dispatching the architecture + performance reviewer.
 
 ```
-Launch Agent with model: sonnet and prompt:
+Launch Agent and prompt:
 You are reviewing a Go hexagonal architecture codebase for architecture compliance
 and performance. You are Reviewer A in a dual-review process.
 
@@ -145,7 +145,7 @@ Do NOT attempt fixes — just report findings.
 Use this when dispatching the security + data reviewer.
 
 ```
-Launch Agent with model: sonnet and prompt:
+Launch Agent and prompt:
 You are reviewing a Go hexagonal architecture codebase for security vulnerabilities
 and data layer quality. You are Reviewer B in a dual-review process.
 
@@ -215,7 +215,7 @@ Do NOT attempt fixes — just report findings.
 Use this ONLY when Reviewer A and Reviewer B disagree on the same code.
 
 ```
-Launch Agent with model: opus and prompt:
+Launch Agent and prompt:
 Two reviewers disagree on specific points in a code review. You are the arbiter.
 
 # Reviewer A said:

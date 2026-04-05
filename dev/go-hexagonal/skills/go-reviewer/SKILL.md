@@ -215,7 +215,7 @@ the dual code quality review. Spec compliance is binary — no need for consensu
 
 ### Step 1: Dispatch Dual Sonnet Review
 
-Launch TWO review agents in parallel with `model: sonnet`:
+Launch TWO review agents in parallel:
 
 **Reviewer A — Architecture + Performance:**
 

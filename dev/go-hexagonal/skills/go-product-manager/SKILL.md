@@ -1,7 +1,6 @@
 ---
 name: go-product-manager
 description: Decomposes a product specification into ordered features with dependencies, tracks progress, and drives sequential execution through the go-hexagonal pipeline. Use when building a full product from a spec document.
-model: opus
 invoke: user
 trigger: never
 tools:

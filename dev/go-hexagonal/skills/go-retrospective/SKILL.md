@@ -3,7 +3,6 @@ name: go-retrospective
 description: Analyzes .feedback/ data across features to detect recurring pipeline
   issues and proposes skill improvements via interactive questionnaire. MANUAL ONLY —
   the user invokes this when they want a retrospective, never triggered automatically.
-model: opus
 invoke: user
 trigger: never
 tools:

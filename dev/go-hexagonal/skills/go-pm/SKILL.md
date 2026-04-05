@@ -1,7 +1,6 @@
 ---
 name: go-pm
 description: Strict product manager that interrogates the user about feature specifications, detects maturity gaps, delegates to go-architect once the spec is solid, and arbitrates spec disputes during implementation.
-model: opus
 invoke: user
 trigger: never
 tools:

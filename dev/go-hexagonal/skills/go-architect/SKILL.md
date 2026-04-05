@@ -231,22 +231,24 @@ The separation between QA and dev exists so tests are an independent specificati
 
 ## Model Assignment Guidelines
 
-Each task in TASKS.md and its corresponding task file must include a `Model` field. This controls which model the runner uses to dispatch the subagent. The architect evaluates the complexity of each task and assigns the appropriate model to optimize cost.
+Each task in TASKS.md and its corresponding task file may include a `Model` field. This is a **recommendation** to the runner, not a hard requirement — the runner or user may override it based on available models, cost constraints, or observed performance. The architect evaluates the complexity of each task and recommends the appropriate model tier to optimize cost.
+
+The default recommendation is **sonnet** unless the task clearly warrants a different tier.
 
 ### Model tiers
 
-- **haiku** — mechanical, pattern-following work with no ambiguity. The task is fully specified and the agent just needs to replicate an existing pattern.
+- **haiku** — recommended for mechanical, pattern-following work with no ambiguity. The task is fully specified and the agent just needs to replicate an existing pattern.
   - Scaffolding (stubs, typed IDs, mocks) when the codebase already has clear examples
   - Simple converter red/green pairs (direct field mapping, no business logic)
   - Straightforward CRUD repository red/green pairs that follow an existing pattern exactly
 
-- **sonnet** — standard implementation work. The task requires judgment but follows known patterns. This is the default.
+- **sonnet** — recommended for standard implementation work. The task requires judgment but follows known patterns. This is the default.
   - Most red/green pairs (domain logic, app services, handlers)
   - Reviews (go-reviewer)
   - E2E test writing
   - Migrations
 
-- **opus** — complex reasoning, novel patterns, or high-stakes decisions. Use sparingly.
+- **opus** — recommended for complex reasoning, novel patterns, or high-stakes decisions. Use sparingly.
   - Tasks involving complex business rules, concurrency, or race conditions
   - First-of-a-kind patterns in the codebase (no existing example to follow)
   - Tasks where getting it wrong would cause subtle, hard-to-detect bugs (security, data integrity)
@@ -255,11 +257,11 @@ Each task in TASKS.md and its corresponding task file must include a `Model` fie
 ### Decision heuristic
 
 Ask: "Could a junior dev do this by copying an existing file and changing names/fields?"
-- Yes → **haiku**
-- Needs some thinking but patterns exist → **sonnet**
-- Needs architectural reasoning or novel design → **opus**
+- Yes → recommend **haiku**
+- Needs some thinking but patterns exist → recommend **sonnet**
+- Needs architectural reasoning or novel design → recommend **opus**
 
-When in doubt, use **sonnet**. It's better to slightly overspend on a task than to have a weaker model fail and trigger the circuit breaker (which costs more than the savings).
+When in doubt, recommend **sonnet**. It's better to slightly overspend on a task than to have a weaker model fail and trigger the circuit breaker (which costs more than the savings).
 
 ## Guidelines
 

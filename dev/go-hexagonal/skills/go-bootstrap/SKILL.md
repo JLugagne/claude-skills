@@ -1,7 +1,6 @@
 ---
 name: go-bootstrap
 description: Bootstraps a new Go project from scratch with hexagonal architecture, testcontainers, CI pipeline, and the full skill/agent suite installed. Use when starting a new project or microservice.
-model: opus
 invoke: user
 trigger: never
 tools:

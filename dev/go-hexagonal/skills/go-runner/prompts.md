@@ -7,7 +7,7 @@ Templates for go-runner to use when dispatching subagents. Read the specific sec
 Use this when dispatching a Haiku guardrail check before a green task.
 
 ```
-Launch Agent with model: haiku and prompt:
+Launch Agent and prompt:
 Quick consistency check for a green-phase task.
 
 # Task
@@ -68,7 +68,7 @@ If you disagree with a test expectation, start with SPEC_DISPUTE:
 Use this when dispatching a Haiku eval after a green task passes verification.
 
 ```
-Launch Agent with model: haiku and prompt:
+Launch Agent and prompt:
 Quick eval of a completed green-phase task.
 
 # Task Summary

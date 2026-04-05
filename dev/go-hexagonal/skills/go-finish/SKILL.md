@@ -18,6 +18,8 @@ Read the [Verification Commands](patterns.md#verification-commands) pattern in p
 
 **If skipped tests remain:** These are unimplemented test stubs from scaffolding. Either they were intentionally deferred (user decision) or they were missed. Ask the user.
 
+**Coverage check:** Run `go test -coverprofile=coverage.out -race -count=1 ./internal/<context>/app/... ./internal/<context>/inbound/...` and `go tool cover -func=coverage.out`. Report the percentages. If any app/ or inbound/ package is below 80%, flag it — go-dev should have created coverage tasks. outbound/ is excluded.
+
 ### Step 2: Acceptance Criteria Check
 
 Read `.plan/<feature-slug>/FEATURE.md` and check every item in "Definition of Done":

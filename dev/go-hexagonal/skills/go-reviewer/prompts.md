@@ -113,6 +113,20 @@ deps:
 | P7 | Tests use `-race` flag | |
 | P8 | Transactions kept short (no external calls inside) | |
 
+# Coverage
+
+Run: `go test -coverprofile=coverage.out -race -count=1 ./internal/<context>/app/... ./internal/<context>/inbound/...`
+Then: `go tool cover -func=coverage.out`
+
+| # | Check | Verdict |
+|---|-------|---------|
+| C1 | app/ packages at ≥80% coverage (report actual %) | |
+| C2 | inbound/ packages at ≥80% coverage (report actual %) | |
+| C3 | If <80%, coverage red tasks exist in TASKS.md | |
+| C4 | No `t.Skip` remaining in test files for completed red phases (`grep -rn 't.Skip' internal/`) | |
+
+outbound/ is excluded — contract tests and e2e cover it.
+
 # Task Ordering (plan review only)
 
 | # | Check | Verdict |

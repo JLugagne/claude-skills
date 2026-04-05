@@ -118,6 +118,9 @@ go build ./...
 
 # 2. Tests FAIL (not error)
 go test ./internal/<context>/... -run TestNewPattern -count=1 -v
+
+# 3. No t.Skip remaining in the files you touched
+grep -rn 't.Skip' <files you modified>
 ```
 
 Report in your summary:
@@ -125,9 +128,13 @@ Report in your summary:
 - That they COMPILE (build passes)
 - That they FAIL for the RIGHT reason (feature not implemented)
 - The actual failure message
+- That NO `t.Skip` remains in the files you touched
+
+**You MUST remove all `t.Skip("TODO: waiting for red")` in the test files and contract files you write to.** The scaffolder creates skipped shells as placeholders — when you write the real test, the skip is replaced entirely. After a red phase completes, zero `t.Skip` should remain in the files you touched. A skipped test is invisible to the pipeline — it won't fail, won't prove anything, and won't drive implementation.
 
 A test that errors (import failure, syntax error) is NOT a valid red.
 A test that passes is NOT a valid red (you're testing existing behavior).
+A test that is skipped is NOT a valid red (it doesn't run at all).
 
 Only a test that compiles, runs, and fails because the feature is missing is a valid red.
 
@@ -137,6 +144,7 @@ Only a test that compiles, runs, and fails because the feature is missing is a v
 - Only modify `_test.go` and `*test/contract.go` files.
 - Tests must compile (`go build ./...`). Non-compiling tests block the pipeline.
 - Tests must fail. A passing test against a stub isn't testing anything.
+- Remove ALL `t.Skip` from files you touch. Replace scaffold placeholders with real assertions. After your work, zero `t.Skip` in your files.
 - Use `require` for checks where failure makes subsequent assertions meaningless. Use `assert` for independent checks.
 - Use table-driven tests for similar cases.
 - One behavior per test function.

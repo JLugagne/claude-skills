@@ -179,6 +179,17 @@ When a breaking change is found, create a red-green task pair: red adds a test a
 | D8 | Cascading deletes for scope-scoped child entities | |
 | D9 | Length/size constraints on user-input fields | |
 
+### Coverage & Test Health (Reviewer A)
+
+| # | Check | Verdict |
+|---|-------|---------|
+| C1 | app/ packages at ≥80% coverage (run `go test -coverprofile` and report %) | |
+| C2 | inbound/ packages at ≥80% coverage | |
+| C3 | If <80%, coverage red tasks exist in TASKS.md | |
+| C4 | No `t.Skip` remaining in test files for completed red phases (`grep -rn 't.Skip' internal/`) | |
+
+outbound/ is excluded from coverage gate — contract tests and e2e cover it.
+
 ### Task Ordering (Reviewer A — plan review only)
 
 | # | Check | Verdict |
@@ -311,7 +322,7 @@ Return the merged checklist tables from both reviewers with all verdicts filled 
 - [gaps, if any]
 
 ### Checklist Results
-[Merged H1-H14, L1-L7, T1-T8, P1-P8, O1-O4 from Reviewer A]
+[Merged H1-H14, L1-L7, T1-T8, P1-P8, C1-C3, O1-O4 from Reviewer A]
 [Merged S1-S12, A1-A7, D1-D9 from Reviewer B]
 FAIL count: N    N/A count: N    PASS count: N
 

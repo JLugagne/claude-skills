@@ -111,6 +111,57 @@ is a claim, not evidence. The orchestrator needs evidence.
 If any step fails, do NOT claim the task is done. Report the actual failure
 in your summary. The orchestrator will decide next steps.
 
+## Coverage Gate (app/ and inbound/ only)
+
+After all tests pass, measure coverage for the packages you touched:
+
+```bash
+# Measure coverage for app and inbound packages
+go test -coverprofile=coverage.out -race -count=1 ./internal/<context>/app/... ./internal/<context>/inbound/...
+go tool cover -func=coverage.out
+```
+
+Report the per-function and total coverage percentages in your summary.
+
+**If coverage is ≥80% for all app/ and inbound/ packages** — no action needed. Report the numbers.
+
+**If coverage is <80% for any app/ or inbound/ package** — create new red task files to close the gap. For each under-covered package:
+
+1. Identify the uncovered functions/branches from `go tool cover -func` output
+2. Write a new task file `.plan/<feature-slug>/task-cov-<N>.md` with:
+
+```markdown
+# task-cov-<N>: [RED] Coverage tests for <package>
+
+## Skill: go-test-writer
+## Phase: red
+## Model: sonnet
+## Depends On: <current-task-id>
+
+## Description
+Coverage for `<package>` is at <X>% (target: 80%). Add tests for the uncovered
+functions listed below. Focus on meaningful behavior, not line-chasing — skip
+trivial getters or error-wrapping-only paths if they don't add value.
+
+### Uncovered functions
+- `FuncA` — [what it does, what to test]
+- `FuncB` — [what it does, what to test]
+
+## Files to Create/Modify
+- `internal/<context>/<layer>/<file>_test.go` — MODIFY: add test functions
+
+## Acceptance Criteria
+- [ ] `go build ./...` passes
+- [ ] New tests FAIL (red) against current stubs or missing branches
+- [ ] Coverage would reach ≥80% when these tests pass
+```
+
+3. Append the new tasks to `.plan/<feature-slug>/TASKS.md`
+
+**Outbound packages (outbound/) are excluded from this gate.** Outbound adapters depend on real infrastructure (testcontainers) which makes coverage measurement in isolation impractical. Their coverage comes from contract tests and e2e tests instead.
+
+**Do NOT chase 100%.** The target is 80%. Once a package is at ≥80%, stop. Do not create coverage tasks for trivial code paths (simple getters, error wrapping, log lines) — focus on untested business logic and branching.
+
 ## Circuit Breaker
 
 If you attempt to make a test pass twice and it still fails with the same (or similar) error:
@@ -130,6 +181,8 @@ When done, return ONLY a short summary to the orchestrator:
 - List of implementation files modified (one per line: `path/to/file.go — created|modified`)
 - One sentence: what was implemented
 - Verification: "go build: PASS, tests: PASS (green)" or "SPEC_DISPUTE: <reason>"
+- Coverage: "app/<pkg>: XX%, inbound/<pkg>: XX%" (or "N/A — no app/inbound packages touched")
+- Coverage tasks created: "task-cov-1, task-cov-2" (or "none — all ≥80%")
 - Any issues
 
 Do NOT return file contents or full implementation code.

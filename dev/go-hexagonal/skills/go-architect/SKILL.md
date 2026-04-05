@@ -213,6 +213,14 @@ The scaffolding task (`task-1`) creates ALL of the following — none are option
 
 After scaffolding: `go build ./...` passes, `go test ./...` shows all new tests as SKIP.
 
+## Coverage Target
+
+**app/ and inbound/ packages must reach ≥80% test coverage.** This is enforced by go-dev: after each green task, it measures coverage and creates additional red tasks if a package is below 80%. You do NOT need to plan coverage tasks upfront — go-dev generates them automatically.
+
+**outbound/ packages are excluded.** They depend on real infrastructure (testcontainers), which makes coverage measurement in isolation impractical. Their quality comes from contract tests and e2e tests.
+
+**Do NOT chase 100%.** 80% is the target. Trivial code paths (getters, error wrapping, log lines) are not worth testing for coverage alone.
+
 ## Red-Green Pair Rules
 
 The separation between QA and dev exists so tests are an independent specification, not circular self-validation:

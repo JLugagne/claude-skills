@@ -1,6 +1,6 @@
 ---
 name: go-surgeon-edit
-description: Use this skill whenever you need to read, navigate, explore, or modify Go source code in a project that has `go-surgeon` installed (check for the binary or `go-surgeon` in go.mod). This includes adding, updating, or deleting functions, methods, structs, and interfaces; generating mocks; implementing interface stubs; generating test skeletons; manipulating struct tags; extracting interfaces from structs; and exploring codebase structure. Trigger this skill for ANY Go code editing task — even simple ones like "add a method" or "rename this function" — because go-surgeon produces deterministic, AST-correct results that avoid indentation errors, import issues, and context window waste. Also trigger when the user says "explore the codebase", "find symbol X", "show me the function", "list packages", or wants to understand Go project structure. Do NOT use generic text tools (cat, sed, grep, diff) for Go code editing when go-surgeon is available.
+description: ALWAYS load when browsing or editing go project. Use this skill whenever you need to read, navigate, explore, or modify Go source code in a project that has `go-surgeon` installed (check for the binary or `go-surgeon` in go.mod). This includes adding, updating, or deleting functions, methods, structs, and interfaces; generating mocks; implementing interface stubs; generating test skeletons; manipulating struct tags; extracting interfaces from structs; and exploring codebase structure. Trigger this skill for ANY Go code editing task — even simple ones like "add a method" or "rename this function" — because go-surgeon produces deterministic, AST-correct results that avoid indentation errors, import issues, and context window waste. Also trigger when the user says "explore the codebase", "find symbol X", "show me the function", "list packages", or wants to understand Go project structure. Do NOT use generic text tools (cat, sed, grep, diff) for Go code editing when go-surgeon is available.
 ---
 
 # go-surgeon: Edit Skill
@@ -13,7 +13,7 @@ You are editing Go code in a project that has `go-surgeon` available. You MUST u
 
 Before using go-surgeon, confirm it's available:
 ```bash
-which go-surgeon || go build -o go-surgeon ./cmd/go-surgeon 2>/dev/null
+which go-surgeon || go install github.com/JLugagne/go-surgeon/cmd/go-surgeon@latest 2>/dev/null
 ```
 
 If not found, check if the project depends on it (`grep go-surgeon go.mod`) and build it.

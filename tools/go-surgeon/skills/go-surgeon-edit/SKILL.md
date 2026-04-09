@@ -9,15 +9,6 @@ You are editing Go code in a project that has `go-surgeon` available. You MUST u
 
 `go-surgeon` is a deterministic AST-based byte-range editor. It automatically runs `goimports` on every mutation, so you NEVER need to manage imports or formatting.
 
-## Pre-flight
-
-Before using go-surgeon, confirm it's available:
-```bash
-which go-surgeon || go install github.com/JLugagne/go-surgeon/cmd/go-surgeon@latest 2>/dev/null
-```
-
-If not found, check if the project depends on it (`grep go-surgeon go.mod`) and build it.
-
 ---
 
 ## 1. Orientation & Navigation

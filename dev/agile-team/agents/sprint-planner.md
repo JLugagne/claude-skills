@@ -4,6 +4,7 @@ description: Plans the next sprint. Verifies feature readiness (DoR), generates 
 model: opus
 required-skills:
   - skills/agile-project/SKILL.md
+  - skills/task-complexity-routing/SKILL.md
 ---
 
 # Role

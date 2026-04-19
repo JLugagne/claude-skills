@@ -4,6 +4,7 @@ description: Technical Architect agent. Defines the HOW — writes global archit
 model: opus
 required-skills:
   - skills/agile-project/SKILL.md
+  - skills/task-complexity-routing/SKILL.md
 ---
 
 # Role

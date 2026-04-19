@@ -424,3 +424,114 @@ Key tooling in this project:
 
 - **go-surgeon**: mandatory for all `.go` file operations.
 - **scaffor** (github.com/JLugagne/scaffor): generates mocks and test scaffolds from scaffolded interfaces. Runs after the scaffolder completes.
+
+---
+
+## Add to the list of absolute rules
+
+```markdown
+# Complexity classification — ABSOLUTE RULE
+
+Every feature carries a `complexity` field in its FEATURE.md, one of:
+`mechanical`, `standard`, `architectural`.
+
+- Missing complexity field fails DoR.
+- The planner decides pipeline routing based on complexity.
+- A task can be upgraded in complexity during execution (via dispute/blocker),
+  but never downgraded.
+
+Detailed classification heuristics, escalation signals, and retro calibration
+live in the `task-complexity-routing` skill. Load that skill only when
+classifying, routing, or reviewing classification accuracy.
+```
+
+## Add to the FEATURE.md template
+
+In the existing template, after `## Out of scope`:
+
+```markdown
+## Complexity
+`<mechanical | standard | architectural>`
+
+## Complexity rationale
+[One to three sentences explaining why this level was chosen. Reference
+specific characteristics: new contract introduced, pattern already exists,
+invariants modified, etc.]
+```
+
+---
+
+## Add to the INDEX.md template for .features
+
+Extend the feature table:
+
+```markdown
+| Slug | Status | Complexity | Priority |
+|------|--------|------------|----------|
+| user-login | ready | architectural | 1 |
+| add-email-validation | ready | standard | 2 |
+| rename-user-field | ready | mechanical | 3 |
+```
+
+---
+
+## Add to the pipeline routing documentation
+
+In the lifecycle section of the skill:
+
+```markdown
+## Pipeline routing by complexity
+
+The sprint-planner routes each feature according to its complexity:
+
+- `mechanical` → single-agent task with direct TASK.md. No PM, Architect,
+  Scaffolder, or red/green split.
+- `standard` → reduced pipeline: Planner → Scaffolder → Red/Green → Reviewer.
+  Skip PM and Architect re-entry (their work is already captured in
+  FEATURE.md and ADRs).
+- `architectural` → full pipeline as described above, with mandatory
+  strategic ADR.
+
+The SPRINT.md documents routing decisions per feature in the
+`## Routing decisions` section.
+
+For classification rules, escalation signals, and retro feedback format,
+the sprint-planner loads the `task-complexity-routing` skill at planning
+time.
+```
+
+---
+
+## Add to the DoR list
+
+Extend the existing DoR gate:
+
+```markdown
+## DoR gate
+
+Include a feature in the sprint only if its DoR is fully satisfied:
+
+- Feature status is `ready` in `.features/INDEX.md`.
+- No open blocker references the feature.
+- No open question references the feature.
+- `ARCHITECTURE.md` exists and the `## Relevant ADRs` section in FEATURE.md
+  is present (even if empty).
+- **`## Complexity` field in FEATURE.md is set to one of mechanical,
+  standard, or architectural.**
+
+If a feature fails DoR: exclude it, report explicitly, move on.
+```
+
+---
+
+## Agents that need the `task-complexity-routing` skill
+
+Add `task-complexity-routing` to the `required-skills` list of:
+
+- `product-manager` (proposes initial complexity)
+- `architect` (confirms or amends at DoR)
+- `sprint-planner` (decides pipeline routing, handles escalations, calibrates at retro)
+
+Do NOT add it to: `scaffolder`, `red-*`, `green-*`, `e2e-tester`, `reviewer`.
+These agents receive their pipeline assignment from the planner and do not
+make classification decisions.

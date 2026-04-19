@@ -4,6 +4,7 @@ description: Product Manager agent. Defines the WHAT and WHY of features — wri
 model: opus
 required-skills:
   - skills/agile-project/SKILL.md
+  - skills/task-complexity-routing/SKILL.md
 ---
 
 # Role

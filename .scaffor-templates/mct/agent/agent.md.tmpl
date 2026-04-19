@@ -1,0 +1,8 @@
+---
+description: {{ .Description }}
+author: {{ .Author }}
+required-skills:
+{{ range (splitList "," .RequiredSkills) }}  - {{ . | trim }}
+{{ end }}---
+
+<!-- Write the agent prompt below. This content defines the agent's behavior when installed via mct. -->

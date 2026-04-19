@@ -1,0 +1,9 @@
+---
+description: {{ .Description }}
+tags:
+{{ range (splitList "," .Tags) }}  - {{ . | trim }}
+{{ end }}---
+
+# {{ .Category | title }} / {{ .Subcategory | title }}
+
+{{ .Description }}

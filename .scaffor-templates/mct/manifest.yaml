@@ -1,0 +1,133 @@
+name: mct
+description: |
+  Scaffolding for claude-mercato (mct) market profiles.
+  claude-mercato is a CLI tool (mct) that lets users discover, install, and update
+  Claude agent and skill definitions from Git-hosted markets.
+  This template creates new profiles in the mct market format: a profile is a
+  two-segment path (category/subcategory) containing a README.md, agents, and skills.
+  Use add_profile to create a new empty profile, add_agent to add an agent definition,
+  and add_skill to add a skill definition (with its supporting files).
+
+commands:
+  # ──────────────────────────────────────────────────────────────
+  # ADD_PROFILE — create a new profile (category/subcategory)
+  # ──────────────────────────────────────────────────────────────
+  - command: add_profile
+    description: Create a new mct market profile with a README.md
+    variables:
+      - key: Category
+        description: Top-level category (e.g. dev, ops, data) — first path segment of the profile
+      - key: Subcategory
+        description: Subcategory (e.g. go, python, docker) — second path segment of the profile
+      - key: Description
+        description: Short description of this profile, shown in mct search results and the TUI
+      - key: Tags
+        description: Comma-separated tags boosted in mct search ranking (e.g. golang,testing,backend)
+    files:
+      - source: profile/README.md.tmpl
+        destination: "{{ .Category | lower }}/{{ .Subcategory | lower }}/README.md"
+        on_conflict: skip
+    hint: |
+      Profile {{ .Category | lower }}/{{ .Subcategory | lower }} created.
+
+      Created:
+        {{ .Category | lower }}/{{ .Subcategory | lower }}/README.md  — profile metadata and description
+
+      NEXT STEPS:
+        1. Edit the README.md body to describe this profile for mct full-text search
+        2. Add agents:  mct execute add_agent --set Category={{ .Category }} --set Subcategory={{ .Subcategory }} --set AgentName=my-agent --set Description="..."
+        3. Add skills:  mct execute add_skill  --set Category={{ .Category }} --set Subcategory={{ .Subcategory }} --set SkillName=my-skill  --set Description="..."
+        4. Validate:    mct lint
+
+  # ──────────────────────────────────────────────────────────────
+  # ADD_AGENT — add an agent definition to a profile
+  # ──────────────────────────────────────────────────────────────
+  - command: add_agent
+    description: Add an agent .md file to an existing mct market profile
+    variables:
+      - key: Category
+        description: Top-level category of the target profile (e.g. dev)
+      - key: Subcategory
+        description: Subcategory of the target profile (e.g. go)
+      - key: AgentName
+        description: Agent filename without extension, kebab-case (e.g. go-developer)
+      - key: Description
+        description: Short description of the agent, shown in mct search results and the TUI
+      - key: Author
+        description: Author name (e.g. JLugagne)
+      - key: RequiredSkills
+        description: Comma-separated list of skill paths relative to market root (e.g. skills/go-test/SKILL.md,skills/go-lint/SKILL.md)
+    files:
+      - source: agent/agent.md.tmpl
+        destination: "{{ .Category | lower }}/{{ .Subcategory | lower }}/agents/{{ .AgentName | lower | kebabcase }}.md"
+        on_conflict: skip
+    hint: |
+      Agent {{ .AgentName }} added to profile {{ .Category | lower }}/{{ .Subcategory | lower }}.
+
+      Created:
+        {{ .Category | lower }}/{{ .Subcategory | lower }}/agents/{{ .AgentName | lower | kebabcase }}.md  — agent definition
+
+      NEXT STEPS:
+        1. Write the agent prompt body in the generated file
+        2. Edit required-skills to add/remove skill dependencies
+        3. Validate: mct lint
+
+  # ──────────────────────────────────────────────────────────────
+  # ADD_SKILL — add a skill definition to a profile
+  # ──────────────────────────────────────────────────────────────
+  - command: add_skill
+    description: Add a skill directory with SKILL.md to an existing mct market profile
+    variables:
+      - key: Category
+        description: Top-level category of the target profile (e.g. dev)
+      - key: Subcategory
+        description: Subcategory of the target profile (e.g. go)
+      - key: SkillName
+        description: Skill directory name, kebab-case (e.g. go-test)
+      - key: Description
+        description: Short description of the skill, shown in mct search results and the TUI
+      - key: Author
+        description: Author name (e.g. JLugagne)
+    files:
+      - source: skill/SKILL.md.tmpl
+        destination: "{{ .Category | lower }}/{{ .Subcategory | lower }}/skills/{{ .SkillName | lower | kebabcase }}/SKILL.md"
+        on_conflict: skip
+    hint: |
+      Skill {{ .SkillName }} added to profile {{ .Category | lower }}/{{ .Subcategory | lower }}.
+
+      Created:
+        {{ .Category | lower }}/{{ .Subcategory | lower }}/skills/{{ .SkillName | lower | kebabcase }}/SKILL.md  — skill definition
+
+      NEXT STEPS:
+        1. Write the skill prompt body in SKILL.md
+        2. Add any supporting files alongside SKILL.md (they are bundled by mct on install)
+        3. Reference this skill from an agent via requires_skills if needed
+        4. Validate: mct lint
+
+test:
+  - command: add_profile
+    params:
+      Category: dev
+      Subcategory: go
+      Description: Tools for Go development workflows
+      Tags: golang,testing,backend
+  - command: add_agent
+    params:
+      Category: dev
+      Subcategory: go
+      AgentName: go-developer
+      Description: Expert Go developer agent
+      Author: JLugagne
+      RequiredSkills: skills/go-test/SKILL.md,skills/go-lint/SKILL.md
+  - command: add_skill
+    params:
+      Category: dev
+      Subcategory: go
+      SkillName: go-test
+      Description: Run Go tests with coverage
+      Author: JLugagne
+
+validate:
+  - "test -f dev/go/README.md"
+  - "test -f dev/go/agents/go-developer.md"
+  - "test -f dev/go/skills/go-test/SKILL.md"

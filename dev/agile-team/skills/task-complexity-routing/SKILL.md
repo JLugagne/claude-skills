@@ -142,6 +142,25 @@ The Planner reads the complexity and decides pipeline routing:
 
 The SPRINT.md `## Routing decisions` section documents what was decided per feature.
 
+### Red and green models are picked independently
+
+Feature-level complexity (`mechanical` / `standard` / `architectural`) routes the **pipeline shape** (which phases run, which files are produced). It does **not** fix the model tier of the red/green teammates.
+
+For every red/green task triple the planner makes **two separate model decisions**:
+
+- **Red tier** — picked from `{red-haiku, red-sonnet, red-opus}` based on test-design complexity (number of cases, concurrency assertions, mocking depth, contract-test setup, invariants to exercise).
+- **Green tier** — picked from `{green-haiku, green-sonnet, green-opus}` based on implementation complexity (algorithmic difficulty, cross-cutting effects, concurrency, ADR-level choices).
+
+Any combination is legal. Common asymmetric pairings:
+
+- `red-opus` + `green-haiku` — hard-to-design test suite (e.g., state machine invariants) against a mechanical implementation that just wires pieces together.
+- `red-haiku` + `green-opus` — simple assertions (input → output) against an implementation that hides real concurrency or algorithmic complexity behind the interface.
+- `red-sonnet` + `green-opus` — standard use-case tests against a cross-cutting implementation (middleware, auth wiring) that has ADR-level decisions.
+
+The planner must **never** promote or demote red and green together just because they are paired. If in doubt on either side individually, promote that side to opus — under-assignment on one side triggers mid-task handoff regardless of what the other side is doing.
+
+At retro, the `## Agent assignment accuracy` section reviews red and green assignments **separately** — a task can be a hit on red and a miss on green, or vice versa.
+
 ### During execution (agents)
 
 Any agent can trigger an escalation by opening a dispute or blocker with the escalation rationale. The planner is the sole authority on re-classification. Agents never self-upgrade or self-downgrade.

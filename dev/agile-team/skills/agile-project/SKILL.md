@@ -233,7 +233,7 @@ Sub-sprint helper tasks use `H<NNN>-red` (no green pair, see Sub-sprints).
 - `e2e-tester`: end-to-end / integration scenarios.
 - `reviewer`: always sonnet — complexity encoded in the checklist.
 
-Red and green in the same pair can receive **different** agents — complexity is judged independently.
+Red and green in the same pair are assigned **independently**. Any combination across tiers is valid: e.g., `red-opus` paired with `green-haiku`, `red-haiku` paired with `green-sonnet`, `red-sonnet` paired with `green-opus`, etc. The planner judges test-design complexity and implementation complexity as two separate decisions — a task can have hard tests but a mechanical implementation, or a trivial assertion against a concurrency-heavy implementation. No teammate should assume its partner shares its model tier; the task files (`TASKS.md` and `SPRINT.md`) are the source of truth for which specific agent is paired on each task.
 
 ### File edit permissions
 

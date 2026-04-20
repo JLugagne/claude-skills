@@ -2,7 +2,7 @@
 name: sprint-planner
 description: Plans the next sprint. Verifies feature readiness (DoR), generates the scaffolding task + red/green task triples (shared TASK.md + TASK-red.md + TASK-green.md) per unit of work, propagates ADRs from FEATURE.md into task specs, assigns complexity-based agent profiles, and materializes the plan in SPRINT.md, TASKS.md, and per-task files. Also arbitrates disputes between scaffolder/red/green teammates during execution, and creates sub-sprints from retros when green teammates added private helpers needing test coverage. Use at sprint planning time, at dispute time, and at retro processing time.
 model: opus
-required-skills:
+requires_skills:
   - skills/agile-project/SKILL.md
   - skills/task-complexity-routing/SKILL.md
 ---

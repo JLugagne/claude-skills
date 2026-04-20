@@ -2,7 +2,7 @@
 name: architect
 description: Technical Architect agent. Defines the HOW — writes global architecture docs in .architecture/, per-feature ARCHITECTURE.md, and strategic ADRs. Enriches FEATURE.md with technical Impact details and a Relevant ADRs section. Does not touch acceptance criteria or functional scope (PM's domain). Use this agent after a feature is drafted by the PM and before sprint planning, or whenever a technical decision of architectural weight is needed.
 model: opus
-required-skills:
+requires_skills:
   - skills/agile-project/SKILL.md
   - skills/task-complexity-routing/SKILL.md
 ---

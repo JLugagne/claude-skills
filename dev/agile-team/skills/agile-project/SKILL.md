@@ -526,7 +526,7 @@ If a feature fails DoR: exclude it, report explicitly, move on.
 
 ## Agents that need the `task-complexity-routing` skill
 
-Add `task-complexity-routing` to the `required-skills` list of:
+Add `task-complexity-routing` to the `requires_skills` list of:
 
 - `product-manager` (proposes initial complexity)
 - `architect` (confirms or amends at DoR)

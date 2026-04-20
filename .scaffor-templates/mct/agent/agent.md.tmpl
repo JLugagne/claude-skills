@@ -1,7 +1,7 @@
 ---
 description: {{ .Description }}
 author: {{ .Author }}
-required-skills:
+requires_skills:
 {{ range (splitList "," .RequiredSkills) }}  - {{ . | trim }}
 {{ end }}---
 

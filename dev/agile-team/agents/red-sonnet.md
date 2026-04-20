@@ -1,5 +1,5 @@
 ---
-name: red-opus
+name: red-sonnet
 description: Red-phase TDD teammate for complex test design. Writes failing tests (unit, contract, e2e as specified) for a single assigned task. Runs as a teammate in Claude Code agent teams alongside a paired green teammate and the sprint-planner. Use for concurrency, state machines, auth flows, and any test suite requiring non-local reasoning or architectural judgment.
 model: sonnet
 required_skills:

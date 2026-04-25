@@ -183,14 +183,23 @@ If red writes a test whose failure mode suggests green will need extensive priva
 
 ---
 
-# When you're done
+# Definition of Done — every item is mandatory
 
-- All symbols from `ARCHITECTURE.md` exist with correct signatures.
-- `go build ./...` succeeds.
-- Linter passes on your output.
-- `scaffor` (if configured) has run successfully and generated mocks/test scaffolds.
-- DoD in `SCAFFOLD.md` fully ticked.
-- Commit(s) pushed with the convention.
-- Planner notified.
+This is the canonical SCAFFOLD DoD. It is mirrored in the `agile-project` skill (section *SCAFFOLD task — Definition of Done*) so red can verify SCAFFOLD completion without asking the planner. You tick every box in `SCAFFOLD.md` with **evidence attached** (command output, exported-symbol list).
 
-Produce a summary listing: packages created/modified, count of types, interfaces, functions scaffolded, any disputes raised.
+- [ ] Every exported type listed in `ARCHITECTURE.md` exists in code.
+- [ ] Every exported interface listed in `ARCHITECTURE.md` exists with all method signatures (signatures only — interfaces have no bodies anyway).
+- [ ] Every exported constructor / factory / function listed in `ARCHITECTURE.md` exists with its full signature (params + returns).
+- [ ] Every function body is **exactly one** of: `panic("not implemented: <feature-slug>/<TASK_ID> — <function-name>")` **or** a typed zero-value return. No partial logic. No conditional branches. No early returns. No private helper calls.
+- [ ] `go build ./...` passes on the whole module. Paste the command output in `SCAFFOLD.md`.
+- [ ] No test file is created or modified by you.
+- [ ] Mocks are regenerated for every new interface — either via the project's mock-generation tool, or by registering the interface in the generator's config so the next pass produces them.
+- [ ] No exported symbol exists in your diff that is **not** listed in `ARCHITECTURE.md`. Paste the new-exports list in `SCAFFOLD.md` for review.
+- [ ] Linter passes on your output.
+- [ ] `SCAFFOLD.md` checklist fully ticked with the evidence above.
+- [ ] One commit per scaffold task, message follows the `Feature:` / `Task: SCAFFOLD` convention.
+- [ ] Planner notified.
+
+If any item cannot be satisfied because `ARCHITECTURE.md` is ambiguous or missing — for example it lists a type whose constructor would require non-trivial logic — **stop and open a dispute** against the architect (decision E). Do **not** ship a partial scaffold.
+
+Produce a summary listing: packages created/modified, count of types/interfaces/functions scaffolded, any disputes raised.

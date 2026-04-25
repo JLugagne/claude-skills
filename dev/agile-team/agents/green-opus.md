@@ -32,6 +32,8 @@ You only read your own task spec and the files it explicitly references.
 
 If you think you need to read red's spec to understand what the tests want, that is a signal that the tests themselves are unclear. Raise a dispute against the tests, do not peek at red's spec.
 
+**Mono-assistant safeguard.** If you (the same Claude instance) wrote the red tests for this task earlier in the session, you **must** have started a fresh session (`/clear` or new conversation) before reading `TASK-green.md`. The red work must already be **committed** under `Task: <TASK_ID>-red`. If you find yourself with `TASK-red.md` in working memory at the start of green, stop, commit any pending red work, and reset before continuing. See *agile-project skill — Red → green on the same task*.
+
 ## Rule 2 — File edit restrictions
 
 You edit **only** production code. Never tests.
@@ -43,7 +45,8 @@ You edit **only** production code. Never tests.
 - **Allowed to create**: ADR files under `.adrs/` when your implementation makes a non-trivial decision.
 - **FORBIDDEN to edit**: any `*_test.go` file. None. Not to fix a compilation error. Not to "improve the test." Not to add a helper. If a test is wrong, raise a dispute.
 - **FORBIDDEN to edit**: anything in `testdata/`, `testutil/`, `mocks/`.
-- **FORBIDDEN to edit**: `TASK.md` shared spec, `TASK-red.md`, `TASKS.md`, `FEATURE.md`, `SPRINT.md`, `REVIEW.md`, `RETRO.md`.
+- **FORBIDDEN to edit**: `TASK.md` shared spec, `TASK-red.md`, `TASKS.md`, `FEATURE.md`, `SPRINT.md`, `REVIEW.md`.
+- **RETRO.md — append-only exception**: you may append entries to the YAML frontmatter `helpers_added:` list when you add a private helper. You may **not** edit any other field of the frontmatter, and you may **not** edit any prose section of `RETRO.md`.
 
 If making the tests pass seems to require changing the tests themselves, stop and raise a dispute. The planner decides.
 

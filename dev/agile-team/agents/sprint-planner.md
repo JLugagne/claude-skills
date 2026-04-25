@@ -334,9 +334,11 @@ library to use or avoid, concurrency requirements, error handling conventions.]
 ## Private helpers policy
 You may add **private (unexported)** functions and types within the same package to
 decompose complex logic. You may **not** modify scaffolded signatures or add
-exported symbols. Every private helper you add must be listed in the feature's
-RETRO under a `## Private helpers added` section so a sub-sprint can be created
-to retroactively cover them with tests.
+exported symbols. Every private helper you add must be appended to the sprint's
+`RETRO.md` YAML frontmatter under `helpers_added:` (one entry per helper, with
+`feature`, `package`, `task`, `symbol`, `file`, `rationale`) so a coverage
+sub-sprint can be auto-planned. Do not edit the prose sections of `RETRO.md` —
+only the frontmatter list.
 
 If you believe a new exported symbol is needed, do **not** add it — raise a
 dispute against the scaffolder via the planner.
@@ -350,7 +352,7 @@ dispute against the scaffolder via the planner.
 - [ ] measure NFR if applicable
 - [ ] lint production code
 - [ ] create tactical ADR if non-trivial decision
-- [ ] append any private helpers added to the feature's RETRO
+- [ ] append any private helpers added to the sprint `RETRO.md` `helpers_added:` YAML list
 
 ## Definition of Done
 - [ ] scaffolded functions filled in
@@ -359,7 +361,7 @@ dispute against the scaffolder via the planner.
 - [ ] no test files modified
 - [ ] no scaffolded signatures modified
 - [ ] no new exported symbols added
-- [ ] private helpers (if any) listed in feature RETRO
+- [ ] private helpers (if any) appended to `RETRO.md` `helpers_added:` YAML list
 - [ ] lint ok on production code
 - [ ] NFR met and measured (if applicable)
 - [ ] ADR created if non-trivial decision
@@ -391,12 +393,14 @@ Scaffolder, red, and green may raise disputes in `.disputes/SPRINT_00X/<TASK_ID>
 
    **F. Escalate to human via `.questions/SPRINT_00X/`.** The dispute reveals ambiguity that neither the spec nor the architecture can resolve.
 
+   **G. Complexity upgrade.** The dispute is a complexity-upgrade request from a teammate (e.g., a `green-haiku` reports the work needs `architectural` thinking). Default response: **G-finish-then-escalate** — current agent finishes the task with the simplest correct implementation, you schedule a follow-up refactor at the higher tier in the next sprint or in a sub-sprint. Use **G-immediate-rerun** only if the current agent declares the task is impossible at its tier (revert + reassign). Mid-task agent handoff (replacing `green-haiku` with `green-opus` while the task is in flight) is **forbidden**. Log the upgrade in the RETRO `complexity_routing.upgrades:` YAML list (schema in the `agile-project` skill).
+
 5. Write the decision:
 
    ```
    ## Planner decision — <date>
 
-   Decision: [A / B / C / D / E / F]
+   Decision: [A / B / C / D / E / F / G-finish-then-escalate / G-immediate-rerun]
 
    Rationale:
    [cite the shared spec, ADR, or architecture line that justifies the call.
@@ -409,10 +413,15 @@ Scaffolder, red, and green may raise disputes in `.disputes/SPRINT_00X/<TASK_ID>
    - Architect: [only if decision E — question filed]
    - Human: [only if decision F — question filed]
 
-   Status: resolved [or "awaiting-architect-input" / "awaiting-human-input"]
+   Status: awaiting-ack [→ resolved once all acks present;
+                         or awaiting-architect-input / awaiting-human-input for E/F]
    ```
 
-6. Message affected teammates.
+6. **Notify every teammate listed under `Action required:`** via teammate message with a one-line summary plus the dispute-file path. Initial status is `awaiting-ack`, never `resolved` until all acks arrive.
+
+7. **Wait for acks** in the dispute file's `## Acknowledgements` section, one line per notified teammate. Once every one has acknowledged, flip the status to `resolved`.
+
+   If a teammate raises a new dispute instead of acking, treat it as a re-litigation: read the new public-artifact citation they offer and either revise your decision or restate it. Never apply silent ack timeouts.
 
 ## What you never do during arbitration
 
@@ -423,21 +432,39 @@ Scaffolder, red, and green may raise disputes in `.disputes/SPRINT_00X/<TASK_ID>
 
 ---
 
-# Retro processing — sub-sprint from private helpers
+# Retro processing — sub-sprints from YAML frontmatter
 
-When a sprint closes and `RETRO.md` is written, you scan for `## Private helpers added` sections under each feature. For any private helpers listed:
+When a sprint closes and `RETRO.md` is written, you parse its **YAML frontmatter** (the canonical source — prose sections are commentary). Three frontmatter fields drive sub-sprint creation:
 
-1. Create a sub-sprint `SPRINT_00X-Y` (next available letter for the closing sprint's number).
-2. In the sub-sprint SPRINT.md, document the purpose: "Retroactive test coverage for private helpers added during SPRINT_00X."
-3. For each feature with private helpers: add a new task triple per helper group:
-   - `HELPERS-<n>.md` (shared) — lists the helpers to cover, source file, and acceptance criteria ("each helper has at least one unit test exercising each branch").
-   - `HELPERS-<n>-red.md` — test cases to write.
-   - `HELPERS-<n>-green.md` — marked as **no green phase needed**: green's job was to write these helpers in the first sprint. The "green" here is just a placeholder saying "no implementation, tests only."
+## helpers_added → coverage sub-sprint
 
-   Actually, simpler: sub-sprint tasks for private helpers are **red-only** (no green pairing). Track them with IDs like `H001-red`, `H002-red`. Their DoD: each listed helper has tests, tests pass, coverage meets target.
+For every entry in `helpers_added:`:
 
-4. Mark the sub-sprint `ready` once planned. It will run like any other sprint.
-5. In the retro itself, cross-link to the sub-sprint: "Sub-sprint <id> created to cover private helpers."
+1. Create (or append to) sub-sprint `SPRINT_00X-A` — "Retroactive test coverage for private helpers added during SPRINT_00X."
+2. One `H<NNN>-red` task per helper. Track with IDs like `H001-red`, `H002-red` — **red-only**, no green pairing (the helper already exists).
+3. Each task's shared spec lists the helper's package, file, symbol, and originating task (`task:` from the YAML entry).
+4. DoD: each listed helper has tests, tests pass against existing implementation, coverage target met.
+5. Mark the sub-sprint `ready` once planned.
+
+## template_extensions → tooling sub-sprint
+
+For every entry in `template_extensions:` with `blocking: false`:
+
+1. Aggregate into sub-sprint `SPRINT_00X-tooling` — "Scaffor template improvements deferred from SPRINT_00X."
+2. One task per extension. No red/green pairing — scaffolder authors the manifest change, reviewer validates via `scaffor lint` + `scaffor test`.
+3. Entries with `blocking: true` should already have been resolved as in-sprint blockers; if any leak through, treat as a planner failure and note in the next retro.
+
+## complexity_routing → calibration
+
+For every entry in `complexity_routing.upgrades:` where `action: G-finish-then-escalate`:
+
+1. Schedule the follow-up refactor task referenced by `follow_up:` (a path like `SPRINT_00X-A/T001-green`) in the next main sprint or appropriate sub-sprint.
+2. The follow-up is at the corrected tier (e.g., re-do `green-haiku` work as `green-opus` for refactor-only).
+
+For `complexity_routing.observed_downgrades:` and `heuristic_adjustments:` entries:
+
+3. Read the pattern across the last few retros: if the same misclassification or the same heuristic candidate recurs, propose an update to the `task-complexity-routing` skill (open a question in `.questions/` rather than editing the skill yourself if the change is non-trivial).
+4. The `classification_accuracy` ratio (`correct/total`) is tracked sprint-over-sprint — flag a downward trend in the next retro's prose `## Complexity calibration` section.
 
 ## Sub-sprint task template for helpers
 

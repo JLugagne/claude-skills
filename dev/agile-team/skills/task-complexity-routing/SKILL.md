@@ -159,32 +159,24 @@ Any combination is legal. Common asymmetric pairings:
 
 The planner must **never** promote or demote red and green together just because they are paired. If in doubt on either side individually, promote that side to opus — under-assignment on one side triggers mid-task handoff regardless of what the other side is doing.
 
-At retro, the `## Agent assignment accuracy` section reviews red and green assignments **separately** — a task can be a hit on red and a miss on green, or vice versa.
+At retro, classification accuracy is tracked **per side** (red and green assignments are reviewed separately) — a task can be a hit on red and a miss on green, or vice versa. The structured retro fields capture this in `complexity_routing.upgrades` and `observed_downgrades` (see schema below).
 
 ### During execution (agents)
 
-Any agent can trigger an escalation by opening a dispute or blocker with the escalation rationale. The planner is the sole authority on re-classification. Agents never self-upgrade or self-downgrade.
+Any agent can trigger an escalation by opening a dispute (type G — complexity upgrade) with the escalation rationale. The planner is the sole authority on re-classification. Agents never self-upgrade or self-downgrade. The exact dispute protocol and the G-finish-then-escalate / G-immediate-rerun decisions are defined in the `agile-project` skill.
 
 ### At retro (Planner)
 
-The RETRO.md includes a `## Complexity routing accuracy` section:
+Routing accuracy and calibration data live in the **`RETRO.md` YAML frontmatter** under the `complexity_routing:` block — this is the single source of truth for classification feedback. The schema is defined in the `agile-project` skill (see *Retrospective* template). It contains:
 
-```markdown
-## Complexity routing accuracy
+- `classification_accuracy: { correct, total }` — the hit/miss counts for the sprint.
+- `upgrades:` — corrections actually applied (in flight via dispute G or as scheduled follow-ups).
+- `observed_downgrades:` — over-classifications noted but never applied (the no-downgrade-in-flight rule).
+- `heuristic_adjustments:` — short strings describing the pattern-level rules to adopt next sprint (e.g., *"resilience patterns → default to architectural"*).
 
-Tasks classified correctly: X/Y
+Narrative analysis of these numbers (why the misclassification happened, whether it is a recurring pattern) goes in the prose section `## Complexity calibration` of the same RETRO. Do not duplicate the structured data into the prose — the YAML is authoritative.
 
-Tasks that should have been higher complexity:
-- `<TASK_ID>`: classified as `<level>`, should have been `<level>` because [reason]
-
-Tasks that could have been lower complexity:
-- `<TASK_ID>`: classified as `<level>`, could have been `<level>` because [reason]
-
-Classification heuristic adjustments for next sprint:
-- [specific rule adjustments based on observed patterns]
-```
-
-This section is the feedback loop that calibrates the classification heuristics over time.
+This is the feedback loop that calibrates the classification heuristics over time. New heuristics added here become the input to next sprint's DoR enrichment by the Architect.
 
 ---
 

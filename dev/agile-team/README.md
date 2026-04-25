@@ -45,12 +45,19 @@ This workflow separates these concerns into explicit roles, with paired teammate
     architect.md          — Architect role (opus)
     sprint-planner.md     — Sprint planning + dispute arbitration (opus)
     scaffolder.md         — Produces testable contracts (haiku)
+    red-haiku.md          — Red-phase TDD, mechanical tests (haiku)
+    red-sonnet.md         — Red-phase TDD, standard tests (sonnet)
     red-opus.md           — Red-phase TDD, complex tests (opus)
+    green-haiku.md        — Green-phase TDD, mechanical impl (haiku)
+    green-sonnet.md       — Green-phase TDD, standard impl (sonnet)
     green-opus.md         — Green-phase TDD, complex impl (opus)
-    [red-sonnet, red-haiku, green-sonnet, green-haiku, e2e-tester, reviewer — to be added]
+    e2e-tester.md         — End-to-end / integration scenarios (sonnet, opus on demand)
+    reviewer.md           — Feature and sprint REVIEW.md authoring (sonnet)
+    bug-detective.md      — On-demand bug investigation, produces .bugs/ reports (sonnet)
 
-agile-project/
-  SKILL.md                — Workflow definition, triggers automatically for matching projects
+skills/
+  agile-project/SKILL.md         — Workflow definition, auto-triggers for matching projects
+  task-complexity-routing/SKILL.md — Classification heuristics, loaded by PM/Architect/Planner only
 ```
 
 Project artifacts (created and maintained by the agents in your Go repo):
@@ -102,6 +109,7 @@ Project artifacts (created and maintained by the agents in your Go repo):
 | green-\*          | varies | implementation filling scaffolded bodies                     | non-test `.go` files (bodies, private helpers only)            |
 | e2e-tester        | varies | end-to-end scenarios                                         | integration test files                                         |
 | reviewer          | sonnet | feature and sprint REVIEW checklists                         | `REVIEW.md` files only                                         |
+| bug-detective     | sonnet | post-mortem bug investigation (on-demand, not in sprint)     | `.bugs/<bug-id>.md` only — never fixes code, routes via planner |
 
 ## The lifecycle of a feature
 
@@ -215,6 +223,21 @@ Decision types:
 - **D**: both adjust
 - **E**: escalate to architect (dispute reveals gap in `ARCHITECTURE.md` or ADRs)
 - **F**: escalate to human (genuine product ambiguity)
+- **G**: complexity upgrade — current agent finishes the task at its tier, planner schedules a follow-up refactor at the higher tier (mid-task agent handoff is forbidden)
+
+The planner notifies impacted teammates and waits for an `## Acknowledgements` line per teammate before flipping the dispute to `resolved`. A dispute resolved without acks is treated as unresolved at sprint review.
+
+### Crash recovery
+
+When teammates crash mid-wave (rate limit, session loss), the procedure is: inventory dirty state via `git status`, classify each file as complete / partial / stale, salvage the partials worth saving and revert the rest, then re-spawn with a narrowed task list. The per-task commit cadence (rule 7) bounds the loss to one task. The crash is logged in the RETRO YAML `crashes:` block to feed the parallelization heuristic.
+
+### Push timing and branching
+
+A red wave produces failing tests by design. Pushing to a branch with a green-tests pre-push hook during a red wave is forbidden. Two strategies are documented and supported: trunk + delayed push (commit locally, push at end of green), or per-feature branch + sprint-end PR. The chosen strategy lives in `.architecture/CONVENTIONS.md`.
+
+### Scope as a single source of truth
+
+`SPRINT.md` is the only artifact that defines the sprint's scope. Per-feature `TASKS.md` only tracks status — it does not redeclare scope. A scope change mid-sprint is made in `SPRINT.md` first, then propagated. A formal generator (`scope.yaml` → `TASKS.md`) was considered and deferred until the no-duplication rule proves insufficient.
 
 ### Complexity-based agent assignment
 
@@ -255,12 +278,16 @@ This is the one place tests must **pass** (not fail) against existing code — t
 These are absolute and documented in the `agile-project` skill:
 
 1. **Go file editing**: all `.go` reads and edits via `go-surgeon`. Never generic Edit/Write/Read.
-2. **Parallelization**: independent work launches in parallel (sub-agents or agent teams), never sequentially.
+2. **Parallelization**: independent work launches in parallel (sub-agents or agent teams), never sequentially. Default fan-out granularity is **one agent per feature**, not one agent per task.
 3. **Tests**: unit + contract + e2e, produced before implementation via red/green.
-4. **Scaffolding-first**: no red or green starts before SCAFFOLD is done.
-5. **Red/green pattern**: strict TDD with paired teammates, spec isolation, planner arbitration.
-6. **Commits**: every commit includes `Feature: <slug>` and `Task: <TASK_ID>`.
-7. **Blockers and questions**: always require human input. No auto-resolution.
+4. **Complexity classification**: every feature carries `mechanical | standard | architectural` set at DoR. The pipeline runs differently per level (red/green only applies to `standard` and `architectural`).
+5. **Scaffolding-first**: no red or green starts before SCAFFOLD is done. SCAFFOLD has a strict 9-item DoD that red can verify itself.
+6. **Red/green pattern**: strict TDD with paired teammates, spec isolation, planner arbitration. When a single assistant must be both red and green, a session reset (`/clear`) and a committed red boundary are mandatory.
+7. **Commits**: one commit per task, message references `Feature: <slug>` and `Task: <TASK_ID>`. No batch commits across tasks (bounds crash blast radius).
+8. **Push timing**: never push to `main` (or any branch with a green-tests pre-push hook) during a red wave. `--no-verify` to bypass is forbidden.
+9. **Scope single source of truth**: `SPRINT.md` is the only artifact that defines sprint scope. Per-feature `TASKS.md` references it without duplicating.
+10. **Disputes**: every planner decision is acknowledged by impacted teammates in the dispute file before the dispute closes.
+11. **Blockers and questions**: always require human input. No auto-resolution.
 
 ## Getting started
 
@@ -305,28 +332,36 @@ These are absolute and documented in the `agile-project` skill:
 - **Agent teams are experimental**. Session resumption (`/resume`, `/rewind`) does not restore teammates. Task status can lag. Shutdown can be slow. See the [Claude Code agent teams docs](https://code.claude.com/docs/en/agent-teams) for the full list.
 - **Spec isolation is auto-disciplined**. Claude Code does not enforce file-read restrictions technically — agents respect the rules because their specs instruct them to. If you need hard enforcement, a `PreToolUse` hook filtering reads by agent name and path is the recommended addition.
 - **PM and Architect can both edit `FEATURE.md`** on different sections. Running them sequentially avoids conflicts; running them simultaneously is possible but requires care.
-- **Sub-sprint mechanics require discipline from green** — a green teammate that forgets to log a private helper in the retro breaks the coverage loop. The feature REVIEW.md checklist should include a verification step to catch this.
-- **Missing agent profiles**: only `red-opus` and `green-opus` are currently defined. Other complexity levels (`red-sonnet`, `red-haiku`, `green-sonnet`, `green-haiku`) and supporting agents (`e2e-tester`, `reviewer`) follow the same pattern but need to be written.
+- **Sub-sprint mechanics require discipline from green** — a green teammate that forgets to log a private helper in the RETRO YAML `helpers_added:` breaks the coverage loop. The feature REVIEW.md checklist includes a verification step to catch this; the green agent specs grant an explicit append-only exception on `RETRO.md` for this purpose.
+- **Mono-assistant red→green** is allowed but requires a session reset (`/clear` or new conversation) and a committed `Task: <TASK_ID>-red` boundary before reading the green spec. Verifiable via `git log` at sprint review. Agent teams remove this constraint; it only applies when running solo without the experimental teams flag.
+- **`bug-detective` is on-demand**, not part of a sprint plan. It is invoked manually when a bug is reported; its output (`.bugs/<bug-id>.md`) is then routed by the planner into a corrective task or a spec question.
 
 ## File-by-file reference
 
-### Skill
+### Skills
 
-- **`agile-project/SKILL.md`** — the workflow definition. Auto-triggers in any project matching the described structure. Every agent loads it via Claude Code's skill mechanism.
+- **`skills/agile-project/SKILL.md`** — the workflow definition. Auto-triggers in any project matching the described structure. Every agent loads it via Claude Code's skill mechanism.
+- **`skills/task-complexity-routing/SKILL.md`** — classification heuristics for `mechanical | standard | architectural`. Loaded only by `product-manager`, `architect`, and `sprint-planner` (the agents that classify or route).
 
 ### Agents
 
-- **`product-manager.md`** (sonnet) — owns product definition. Reads backlog and existing features; writes the PM-owned sections of `FEATURE.md` and `INDEX.md`. Never touches code or architecture.
+- **`product-manager.md`** (sonnet) — owns product definition. Writes PM-owned sections of `FEATURE.md` and `INDEX.md`, proposes initial complexity. Never touches code or architecture.
 
-- **`architect.md`** (opus) — owns technical design. Reads existing architecture and ADRs; writes global `.architecture/`, per-feature `ARCHITECTURE.md`, strategic ADRs, and two specific sections of `FEATURE.md`. Never touches PM sections, tests, or production code.
+- **`architect.md`** (opus) — owns technical design. Writes `.architecture/`, per-feature `ARCHITECTURE.md`, strategic ADRs, and the technical sections of `FEATURE.md` including `## Complexity` (with rationale).
 
-- **`sprint-planner.md`** (opus) — owns planning and arbitration. Breaks features into tasks, assigns agents, propagates ADRs, arbitrates disputes citing only public artifacts, and creates sub-sprints from retro feedback. Never reads private specs, writes code, or creates ADRs.
+- **`sprint-planner.md`** (opus) — owns planning, routing, and arbitration. Breaks features into tasks, picks the pipeline by complexity, assigns agents, arbitrates disputes (types A–G) on public artifacts only, creates sub-sprints from retro YAML.
 
-- **`scaffolder.md`** (haiku) — produces testable contracts. Reads `ARCHITECTURE.md` and relevant ADRs; writes types, interfaces, and empty-body signatures. Couples with `scaffor` for mocks and test scaffolds. Never writes tests, logic, or private helpers.
+- **`scaffolder.md`** (haiku) — produces testable contracts. Strict 9-item DoD ensures red can verify scaffold completion without asking the planner. Disputes against the architect when `ARCHITECTURE.md` is ambiguous.
 
-- **`red-opus.md`** (opus) — writes failing tests against scaffolded contracts. Reads shared task spec + own red spec + test files from same package. Never reads green's spec or edits production code.
+- **`red-haiku.md`** / **`red-sonnet.md`** / **`red-opus.md`** — writes failing tests at three complexity tiers. Reads shared spec + own red spec + test files in the same package. Never reads green's spec or edits production code.
 
-- **`green-opus.md`** (opus) — fills in scaffolded bodies. Reads shared task spec + own green spec + test files red produced. Never reads red's spec, edits tests, or modifies scaffolded signatures.
+- **`green-haiku.md`** / **`green-sonnet.md`** / **`green-opus.md`** — fills scaffolded bodies at three tiers. Reads shared spec + own green spec + red's test files. Mono-assistant safeguard: a session reset is required if the same instance authored the red work earlier in the session.
+
+- **`e2e-tester.md`** (sonnet, opus on demand) — writes integration scenarios after every red/green pair completes. Drives features through real entry points against testcontainers. Inherits red's isolation rules (no private spec reads).
+
+- **`reviewer.md`** (sonnet) — produces feature and sprint REVIEW.md. Post-mortem reads everything (including private specs) but writes only REVIEW files. Verifies every checklist item with concrete evidence (test output, file path, commit hash).
+
+- **`bug-detective.md`** (sonnet, on-demand) — investigates reported bugs, classifies as implementation vs. spec bug, writes `.bugs/<bug-id>.md`. Does not fix — routes via planner.
 
 ## Design rationale
 

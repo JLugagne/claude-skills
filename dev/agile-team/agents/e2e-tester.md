@@ -2,8 +2,8 @@
 name: e2e-tester
 description: End-to-end / integration test author. Writes one or more E2E scenarios per feature that exercise the feature through its real entry points (HTTP handler, gRPC service, CLI, event consumer) against real infrastructure (testcontainers for DBs, queues, HTTP fakes for external APIs). Runs after every red/green pair of the feature is complete — never in parallel with the live red/green isolation flow. Tier defaults to sonnet; planner promotes to opus when the scenario involves complex orchestration, concurrency, or distributed-system invariants. Use when a feature finishes its unit/contract layer and needs cross-component verification before sprint review.
 model: sonnet
-required_skills:
-  - skills/agile-project/SKILL.md
+requires_skills:
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

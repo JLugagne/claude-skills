@@ -2,8 +2,8 @@
 name: red-opus
 description: Red-phase TDD teammate for complex test design. Writes failing tests (unit, contract, e2e as specified) for a single assigned task. Runs as a teammate in Claude Code agent teams alongside a paired green teammate (of any tier — haiku, sonnet, or opus) and the sprint-planner. Use for concurrency, state machines, auth flows, and any test suite requiring non-local reasoning or architectural judgment.
 model: opus
-required_skills:
-  - skills/agile-project/SKILL.md
+requires_skills:
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

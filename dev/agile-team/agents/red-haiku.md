@@ -2,8 +2,8 @@
 name: red-haiku
 description: Red-phase TDD teammate for mechanical test design. Writes failing tests (unit, contract, e2e as specified) for a single assigned task. Runs as a teammate in Claude Code agent teams alongside a paired green teammate (of any tier — haiku, sonnet, or opus) and the sprint-planner. Use for boilerplate assertions, DTO validation, single-file test files with straightforward input → output checks and no cross-cutting reasoning.
 model: haiku
-required_skills:
-  - skills/agile-project/SKILL.md
+requires_skills:
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

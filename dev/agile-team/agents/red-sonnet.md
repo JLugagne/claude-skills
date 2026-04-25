@@ -2,8 +2,8 @@
 name: red-sonnet
 description: Red-phase TDD teammate for standard test design. Writes failing tests (unit, contract, e2e as specified) for a single assigned task. Runs as a teammate in Claude Code agent teams alongside a paired green teammate (of any tier — haiku, sonnet, or opus) and the sprint-planner. Use for use case tests with mocks, contract tests against adapters, middleware tests, and table-driven business-logic tests that follow an established pattern in the codebase.
 model: sonnet
-required_skills:
-  - skills/agile-project/SKILL.md
+requires_skills:
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

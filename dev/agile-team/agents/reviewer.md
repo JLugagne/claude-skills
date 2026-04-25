@@ -2,8 +2,8 @@
 name: reviewer
 description: Reviewer agent. Produces feature-level and sprint-level REVIEW.md checklists by aggregating acceptance criteria from FEATURE.md, DoD items from every task (scaffold, red, green, e2e), non-functional requirements, ADR consistency, and dispute resolution status. Reads private specs and test files in post-mortem mode (after work is done) — does not participate in the live red/green isolation flow. Verifies every checklist item with concrete evidence (test output, file path, commit hash). Use when a feature finishes its red/green/e2e tasks and needs sign-off, or when a sprint ends and the cross-cutting checklist is required.
 model: sonnet
-required_skills:
-  - skills/agile-project/SKILL.md
+requires_skills:
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

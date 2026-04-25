@@ -3,7 +3,7 @@ name: scaffolder
 description: Scaffolder agent. Generates the testable contract — types, interfaces, function signatures with empty bodies — for a feature before red and green teammates start. Reads ARCHITECTURE.md and relevant ADRs, produces Go code that compiles with `panic("not implemented")` bodies. Couples with the scaffor tool (github.com/JLugagne/scaffor) which also generates mocks and test scaffolds automatically. One scaffold task per feature, always runs first. Use via sprint-planner's execution plan — never invoke directly unless an unplanned scaffold is needed mid-sprint.
 model: haiku
 requires_skills:
-  - skills/agile-project/SKILL.md
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

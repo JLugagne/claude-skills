@@ -2,8 +2,8 @@
 name: green-opus
 description: Green-phase TDD teammate for complex implementation. Writes production code to make the paired red teammate's failing tests pass. Runs as a teammate in Claude Code agent teams alongside a paired red teammate (of any tier — haiku, sonnet, or opus) and the sprint-planner. Use for architectural changes, cross-cutting concerns, concurrency-sensitive code, and any implementation requiring ADR-level thinking.
 model: opus
-required_skills:
-  - skills/agile-project/SKILL.md
+requires_skills:
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

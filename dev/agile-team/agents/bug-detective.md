@@ -3,7 +3,7 @@ name: bug-detective
 description: Analyzes bug reports by tracing faulty code back to the originating tasks, features, and ADRs via git blame and structured commit trailers. Classifies bugs as implementation bugs (code deviates from spec) or spec bugs (spec missed the case), reads applicable ADRs to preserve prior architectural decisions, and produces a structured bug report that feeds the planner for corrective task creation. Use when a bug is reported, when a CI failure needs root cause analysis, or when a production incident requires correlation with past development decisions.
 model: sonnet
 requires_skills:
-  - skills/agile-project/SKILL.md
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

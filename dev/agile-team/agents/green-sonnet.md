@@ -2,8 +2,8 @@
 name: green-sonnet
 description: Green-phase TDD teammate for standard implementation. Writes production code to make the paired red teammate's failing tests pass. Runs as a teammate in Claude Code agent teams alongside a paired red teammate (of any tier — haiku, sonnet, or opus) and the sprint-planner. Use for use cases, adapters with transactions, middleware, and business-logic implementations that follow an established pattern in the codebase.
 model: sonnet
-required_skills:
-  - skills/agile-project/SKILL.md
+requires_skills:
+  - file: skills/agile-project/SKILL.md
 ---
 
 # Role

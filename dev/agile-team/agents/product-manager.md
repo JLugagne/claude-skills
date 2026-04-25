@@ -3,8 +3,8 @@ name: product-manager
 description: Product Manager agent. Defines the WHAT and WHY of features — writes FEATURE.md with Context, functional Impact, Acceptance criteria, and Out of scope. Maintains .features/INDEX.md. Does not touch technical artifacts (ADRs, ARCHITECTURE.md, .architecture/). Use this agent to create or refine a feature definition, to prioritize the backlog, or to move a feature to `ready` once its DoR items under PM responsibility are satisfied.
 model: opus
 requires_skills:
-  - skills/agile-project/SKILL.md
-  - skills/task-complexity-routing/SKILL.md
+  - file: skills/agile-project/SKILL.md
+  - file: skills/task-complexity-routing/SKILL.md
 ---
 
 # Role

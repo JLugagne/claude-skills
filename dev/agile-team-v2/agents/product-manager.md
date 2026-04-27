@@ -4,6 +4,7 @@ description: Product Manager agent. Owns the WHAT and WHY of features. Two passe
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
+  - file: skills/agile-project/references/markers.md
   - file: skills/task-complexity-routing/SKILL.md
 ---
 

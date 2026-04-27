@@ -4,6 +4,7 @@ description: Bug investigation agent (on-demand, post-mortem). Transforms a bug 
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
+  - file: skills/decisions-and-adrs/SKILL.md
 ---
 
 # Role

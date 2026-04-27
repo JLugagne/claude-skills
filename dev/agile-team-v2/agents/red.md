@@ -4,6 +4,8 @@ description: Red-phase TDD agent (single tier — sonnet by default). Writes fai
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
+  - file: skills/agile-project/references/markers.md
+  - file: skills/tdd-pattern/SKILL.md
 ---
 
 # Role

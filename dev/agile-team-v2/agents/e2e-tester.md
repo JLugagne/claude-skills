@@ -4,6 +4,7 @@ description: End-to-end / integration test author. Writes one or more E2E scenar
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
+  - file: skills/agile-project/references/markers.md
 ---
 
 # Role

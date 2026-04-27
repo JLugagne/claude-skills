@@ -99,46 +99,13 @@ Detailed SCAFFOLD Definition of Done (the per-item checklist the architect ticks
 
 # Red/Green pattern — ABSOLUTE RULE
 
-All **production-code feature work** at `standard` or `architectural` complexity follows strict TDD with **paired teammates** and **discipline-based spec isolation**.
+All **production-code feature work** at `standard` or `architectural` complexity follows strict TDD with **paired teammates** and **discipline-based spec isolation**:
 
 - **Red phase**: the `red` agent writes failing tests against the scaffolded contract. Cannot edit production code or scaffolded signatures.
 - **Green phase**: the `green` agent implements scaffolded function bodies. Cannot edit test code, cannot modify scaffolded signatures, cannot add exported symbols.
+- **Spec isolation by discipline**: in v2 there are no `TASK.md` / `TASK-red.md` / `TASK-green.md` files. Red and green find their work via the inline marker `TODO(impl-<slug>, ac-<NNN>)` in code (`grep`); the only handoff is committed code/tests. Neither reads the other's in-flight work.
 
-## Spec isolation — by discipline, not by file
-
-In v2 there are no `TASK.md`, `TASK-red.md`, or `TASK-green.md` files. Both red and green find their work via the inline marker `TODO(impl-<slug>, ac-<NNN>)` in the production code, looked up via `grep`. Their contracts are:
-
-- **Red reads**: `// AC:` description on the scaffolded body, the scaffolded signature itself, applicable DECISIONS and ADRs, FEATURE.md `# User journey` for context, and (for business tests) the `// SCENARIO:` marker the PM placed in the matching test skeleton.
-- **Green reads**: `// AC:` description, the scaffolded signature, **red's committed test assertions** (the only handoff between them), applicable DECISIONS and ADRs, existing production code in the same package for patterns.
-
-Neither reads any "private spec" — none exists. Neither reads the other's in-flight work; the only handoff is the committed test files (red → green) and the committed implementation (green → reviewer / e2e-tester).
-
-**Mono-assistant safeguard.** If the same Claude instance must be both red and green for the same task (no agent teams, working solo), the assistant completes red end-to-end, **commits** under `Task: <slug>-T<NNN>-red`, then **starts a fresh session** before reading anything green-side. The reset is what purges red's working memory. `check.sh` audits at sprint review: for every task where red and green were the same assistant, `git log` must show at least one commit between the red and green work.
-
-## In scope vs out of scope of red/green
-
-The rule applies to **production-code feature work**. It does **not** apply to mechanical maintenance, where there is a unique correct answer and no design decision.
-
-| In scope of red/green (rule applies)                                  | Out of scope (rule does not apply)                              |
-|-----------------------------------------------------------------------|-----------------------------------------------------------------|
-| `complexity: standard` features                                       | Rename a local symbol with no API change                        |
-| `complexity: architectural` features                                  | `gofmt`, `goimports`, linter auto-fixes                         |
-| Bug fixes that change observable behaviour                            | Dependency bump with no API impact                              |
-| New exported APIs, signatures, types                                  | Comment / log message / error string fixes                      |
-| Behaviour changes covered by `// AC:` markers                         | Regenerating mocks after an interface change already decided    |
-|                                                                       | `complexity: mechanical` features (mono-agent task)             |
-
-When in doubt, classify **upward** (`standard` over `mechanical`).
-
-## Tier fusion (anticipates bloc 3 of the refonte doc)
-
-There is **one** `red` agent and **one** `green` agent (sonnet by default). The v1 system of `red-haiku` / `red-sonnet` / `red-opus` and `green-haiku` / `green-sonnet` / `green-opus` is collapsed. For unusually complex tests or implementations, the sprint-planner spawns the same agent with a model override at spawn time:
-
-```
-Agent({ subagent_type: "red", model: "opus", description: "...", prompt: "..." })
-```
-
-The agent's behaviour is unchanged — only the underlying model differs.
+**Detailed isolation rules, in-scope / out-of-scope discrimination, mono-assistant safeguard, and the marker lookup procedure live in the `tdd-pattern` skill — loaded by `red` and `green` only.** Other agents do not need those rules.
 
 ---
 
@@ -159,31 +126,13 @@ Every commit message **must** reference feature and task:
 
 Feature: <feature-slug>
 Task: <TASK_ID>
-[Authored-By: <agent-id>]   <-- mandatory on .decisions/ and mechanical: changes
+[Authored-By: <agent-id>]   <-- mandatory on .decisions/ and mechanical: changes (R6)
 ```
 
 - `Feature:` slug under `.features/<slug>/`. `maintenance` for non-feature work.
-- `Task:` includes phase suffix:
-  - `<slug>-scaffold` (architect's scaffolding pass).
-  - `<slug>-pm2` (PM passe 2).
-  - `<slug>-T<NNN>-red` (red phase on AC marker NNN).
-  - `<slug>-T<NNN>-green` (green phase on AC marker NNN).
-  - `<slug>-E<NNN>` (e2e-tester on SCENARIO marker NNN).
-  - `<slug>-REVIEW` (reviewer feature-level).
-  - `SPRINT_00X-REVIEW` (reviewer sprint-level).
-  - `SPRINT_00X-retro` (sprint-planner retro processing).
-  - `<slug>-T<NNN>` (mono-agent task — no `-red` / `-green` suffix).
-  - `<slug>-T<NNN>-bugfix` (corrective task after bug-detective report).
-  - `<slug>-decision-review` (architect statuing a tactical DECISION).
-  - `H<NNN>-red` (sub-sprint helper-coverage task).
+- `Task:` includes a phase suffix matching the agent's role (e.g., `<slug>-scaffold`, `<slug>-T<NNN>-red`, `<slug>-T<NNN>-green`, `<slug>-E<NNN>`, `<slug>-REVIEW`, `SPRINT_00X-REVIEW`, `SPRINT_00X-retro`, `<slug>-T<NNN>` for mono-agent, `<slug>-T<NNN>-bugfix`, `<slug>-decision-review`, `H<NNN>-red`). Each agent spec documents the suffix it uses.
 
-**`Authored-By:` trailer** — mandatory whenever the commit:
-
-- Creates, modifies, or deletes any file under `.decisions/`.
-- Modifies the `mechanical:` field in any FEATURE.md frontmatter.
-- Modifies the `review.reviewed_by` field in any DECISION.
-
-Values: `architect` or `green`. `check.sh` cross-checks `git blame` against the trailer (R6); mismatch is a CI block. Full rules in the `decisions-and-adrs` skill.
+**`Authored-By:` trailer** — mandatory whenever the commit creates/modifies/deletes any file under `.decisions/`, modifies the `mechanical:` field in any FEATURE.md frontmatter, or modifies the `review.reviewed_by` field in any DECISION. Values: `architect` or `green`. `check.sh` cross-checks `git blame` against the trailer (R6); mismatch is a CI block. **Full rules and examples in the `decisions-and-adrs` skill.**
 
 Branches: `<feature-slug>/<TASK_ID>-<short-description>` (e.g., `auth-login/T003-green-impl`).
 
@@ -533,11 +482,14 @@ Three-level defence (pre-commit YAML format → CI git-blame ↔ trailer cross-c
 
 # Skill loading by role
 
-| Skill                          | Loaded by                                                     |
-|--------------------------------|---------------------------------------------------------------|
-| `agile-project` (this file)    | every agent                                                   |
-| `task-complexity-routing`      | product-manager, architect, sprint-planner                    |
-| `decisions-and-adrs`           | architect, green, sprint-planner                              |
-| `references/markers.md` (load on demand) | architect (scaffolding), product-manager (passe 2), red, e2e-tester, reviewer (pass 2) — when they need exact marker format |
+| Skill                                    | Loaded by                                                                                            |
+|------------------------------------------|------------------------------------------------------------------------------------------------------|
+| `agile-project` (this file)              | every agent                                                                                          |
+| `agile-project/references/markers.md`    | every agent that touches markers — architect, PM, red, green, e2e-tester, reviewer, sprint-planner   |
+| `task-complexity-routing`                | product-manager, architect, sprint-planner                                                           |
+| `decisions-and-adrs`                     | architect, green, sprint-planner, reviewer (pass DoD audit), bug-detective (architectural-bug class) |
+| `tdd-pattern`                            | red, green                                                                                           |
 
-Execution agents that don't classify or write decisions (red, e2e-tester, bug-detective, reviewer) carry minimal skill context. They consult `references/markers.md` ad-hoc.
+bug-detective is the only agent that doesn't load markers reference (it reads `// AC:` from committed code post-mortem, no need for the format spec).
+
+`tdd-pattern` is loaded only by red and green because spec-isolation discipline, in-scope/out-of-scope, and the mono-assistant safeguard apply only to the live red/green pair. Other agents operate outside that flow.

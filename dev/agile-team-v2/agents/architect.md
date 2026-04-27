@@ -4,6 +4,7 @@ description: Architect agent. Owns the technical HOW — global architecture und
 model: opus
 requires_skills:
   - file: skills/agile-project/SKILL.md
+  - file: skills/agile-project/references/markers.md
   - file: skills/task-complexity-routing/SKILL.md
   - file: skills/decisions-and-adrs/SKILL.md
 ---

@@ -4,6 +4,7 @@ description: Green-phase TDD agent (single tier — sonnet by default). Replaces
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
+  - file: skills/decisions-and-adrs/SKILL.md
 ---
 
 # Role

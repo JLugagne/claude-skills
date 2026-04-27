@@ -1,6 +1,6 @@
 ---
 name: agile-project
-description: "Use this skill whenever you are working on a Go project following the agile-team-v2 workflow — features in .features/, sprints in .sprints/, strategic ADRs in .adrs/, tactical/strategic decisions log in .decisions/, global architecture in .architecture/ (VISION.md + ARCHITECTURE.md + CONVENTIONS.md + INTEGRATIONS.md). The architect absorbs the ex-scaffolder role: scaffolds Go contracts (signatures with `panic(\"not implemented\")` bodies), inlines `// AC: <criterion>` + `// TODO(impl-<feat>, ac-<NNN>)` markers above each scaffolded body, and decides the `mechanical: true|false` flag in FEATURE.md frontmatter. The PM has two passes: passe 1 (FEATURE.md narrative — Why/Context/User journey/Out of scope/Open questions), passe 2 (inline `// SCENARIO:` + `t.Skip(\"not implemented\")` in business test skeletons within `pm_test_territories`, skipped if `mechanical: true`). The sprint-planner lists tasks **by code marker** in SPRINT.md (no separate TASK.md / TASK-red.md / TASK-green.md / SCAFFOLD.md / TASKS.md files — those v1 artifacts no longer exist). Spec isolation between red and green is preserved by **discipline**: red reads `// AC:` + `// SCENARIO:`, green reads `// AC:` + red's committed test assertions. There is one `red` agent and one `green` agent (no per-tier variants — anticipates bloc 3). Tactical DECISIONS authored by green during a sprint (under R2 strict rules: scope=tactical, revisit=true, necessary, referenced, Authored-By:green trailer) are surfaced in RETRO.md `decisions_to_statue:` and statued by the architect at the start of the next sprint via a Wave 1 task. The reviewer runs three passes (DoD via `scripts/check.sh`, Scenarios narrative-vs-tests, Security checklist). The `## Human override` section of REVIEW.md is human-only with strict 5-field format; security findings cannot be overridden without a Decision reference. Triggers: any Go file editing in this kind of project (must use go-surgeon — never generic Edit/Write/Read), sprint planning, feature breakdown, FEATURE.md / SPRINT.md / REVIEW.md / RETRO.md / DECISION-NNN-*.md mentions, dispute files in .disputes/, any of the product-manager/architect/sprint-planner/red/green/e2e-tester/reviewer/bug-detective agents, `Authored-By:` commit trailer, the `// AC:` / `// SCENARIO:` / `TODO(impl-...)` markers, or any repository containing .features/ / .sprints/ / .adrs/ / .architecture/ / .decisions/ directories. Consult before planning a sprint, before starting any task, before writing a commit, before creating a DECISION or ADR, before responding to a dispute, or whenever you need to know what artifact goes where."
+description: "Use this skill whenever you are working on a Go project following the agile-team-v2 workflow — features in .features/, sprints in .sprints/, strategic ADRs in .adrs/, tactical/strategic decisions log in .decisions/, global architecture in .architecture/ (VISION.md + ARCHITECTURE.md + CONVENTIONS.md + INTEGRATIONS.md). The architect absorbs the ex-scaffolder role: scaffolds Go contracts (signatures with `panic(\"not implemented\")` bodies), inlines `// AC: <criterion>` + `// TODO(impl-<feat>, ac-<NNN>)` markers above each scaffolded body, and decides the `mechanical: true|false` flag in FEATURE.md frontmatter. The PM has two passes: passe 1 (FEATURE.md narrative — Why/Context/User journey/Out of scope/Open questions), passe 2 (inline `// SCENARIO:` + `t.Skip(\"not implemented\")` in business test skeletons within `pm_test_territories`, skipped if `mechanical: true`). The sprint-planner lists tasks **by code marker** in SPRINT.md (no separate TASK.md / TASK-red.md / TASK-green.md / SCAFFOLD.md / TASKS.md files — those v1 artifacts no longer exist). Spec isolation between red and green is preserved by **discipline**: red reads `// AC:` + `// SCENARIO:`, green reads `// AC:` + red's committed test assertions. There is one `red` agent and one `green` agent (no per-tier variants — anticipates bloc 3). Tactical DECISIONS authored by green during a sprint (under R2 strict rules) are surfaced in RETRO.md `decisions_to_statue:` and statued by the architect at the start of the next sprint via a Wave 1 task. The reviewer runs three passes (DoD via `scripts/check.sh`, Scenarios narrative-vs-tests, Security checklist). The `## Human override` section of REVIEW.md is human-only with strict 5-field format; security findings cannot be overridden without a Decision reference. Triggers: any Go file editing in this kind of project (must use go-surgeon — never generic Edit/Write/Read), sprint planning, feature breakdown, FEATURE.md / SPRINT.md / REVIEW.md / RETRO.md / DECISION-NNN-*.md mentions, dispute files in .disputes/, any of the product-manager/architect/sprint-planner/red/green/e2e-tester/reviewer/bug-detective agents, `Authored-By:` commit trailer, the `// AC:` / `// SCENARIO:` / `TODO(impl-...)` markers, or any repository containing .features/ / .sprints/ / .adrs/ / .architecture/ / .decisions/ directories. Consult before planning a sprint, before starting any task, before writing a commit, before responding to a dispute, or whenever you need to know what artifact goes where. Detailed marker conventions and lifecycle live in `references/markers.md`. Decision-log format and R2/R6 rules live in the separate `decisions-and-adrs` skill (loaded by architect/green/sprint-planner only)."
 ---
 
 # Agile Project Workflow — v2
@@ -8,6 +8,11 @@ description: "Use this skill whenever you are working on a Go project following 
 Workflow for Go projects using strict TDD, sprint-based agile, **intent-in-code** (no prose intermediaries), and the new `.decisions/` log with two-zone frontmatter and `Authored-By:` trailer audit.
 
 The intent of v2 is captured in one sentence: **the code and the tests are the authority of execution.** No `TASK.md`, no `TASK-red.md`, no `TASK-green.md`, no `SCAFFOLD.md`, no per-feature `ARCHITECTURE.md`, no `TASKS.md`. Acceptance criteria live as `// AC:` comments above scaffolded function bodies. User-journey scenarios live as `// SCENARIO:` comments above business test skeletons. The sprint-planner lists tasks by code marker, not by prose file. Spec isolation between red and green is preserved by **discipline**, not by separate files.
+
+**Companion documents:**
+
+- `references/markers.md` — full marker conventions and lifecycle. Load when you need the exact format.
+- `skills/decisions-and-adrs/SKILL.md` — separate skill for `.decisions/` and `.adrs/` write rules. Loaded by architect, green, sprint-planner only.
 
 ---
 
@@ -31,11 +36,6 @@ Use sub-agents (`Agent` tool) or agent teams for any task composed of independen
 
 - Launch parallel work in a single message (multiple simultaneous tool calls, or a team spawn).
 - Never execute sequentially what can be parallelized.
-- Examples: scaffolding multiple features in parallel, writing independent tests, creating files in different packages.
-
-## Parallelism granularity
-
-Maximum theoretical fan-out (e.g., "23 independent red tasks") is rarely the right unit. Rate limits, token budgets, and the cost of recovering from concurrent crashes (see *Agent crash recovery*) make wide fan-outs fragile.
 
 **Default heuristic — feature as the unit of parallelism:**
 
@@ -45,19 +45,13 @@ Maximum theoretical fan-out (e.g., "23 independent red tasks") is rarely the rig
 
 This caps live agents to roughly the number of features in scope (typically 2–4 per sprint). It trades some theoretical parallelism for crash containment: a rate-limit on one feature does not corrupt three others' in-flight state.
 
-**When to deviate (sprint-planner's call):**
-
-- A feature with one heavy `architectural` task and several `mechanical` tasks: split the feature across two agents — the heavy task does not block the easy ones.
-- A scaffold-only wave: the architect's scaffolding step is short-lived; running it for several features in parallel is fine.
-- An e2e wave at sprint end: e2e tests for different features touch different test files; one agent per e2e is fine.
-
 **What to avoid:**
 
 - Spawning N agents where N equals task count (the v1 anti-pattern: 23 reds in parallel, 3 crashed mid-run, batch-commit lost work across all 23).
 - Mixing red and green of the same task on the same agent — spec-isolation discipline breaks.
 - Two agents writing to the same package concurrently (file-level races on `go-surgeon` edits).
 
-The sprint-planner documents the chosen fan-out in `SPRINT.md` under `## Parallelization plan`, with a one-sentence rationale.
+The sprint-planner documents the chosen fan-out in `SPRINT.md` under `## Parallelization plan`, with a one-sentence rationale. Crash recovery procedure: see the `sprint-planner` agent for the salvage/revert/re-spawn protocol.
 
 ---
 
@@ -77,7 +71,7 @@ For `mechanical: true` features, the test bar drops to "existing tests still pas
 
 # Complexity classification — ABSOLUTE RULE
 
-Every feature carries a `## Complexity` field in its FEATURE.md, one of `mechanical`, `standard`, `architectural`. **Distinct from the `mechanical:` frontmatter flag** — see the dedicated discussion in the `task-complexity-routing` skill.
+Every feature carries a `## Complexity` field in its FEATURE.md, one of `mechanical`, `standard`, `architectural`. **Distinct from the `mechanical:` frontmatter flag** — see `task-complexity-routing` skill for the discussion.
 
 - Missing complexity field fails DoR.
 - The sprint-planner decides pipeline routing based on this field.
@@ -99,25 +93,7 @@ There is **no separate scaffolder agent** in v2 — the architect does both. The
 - **Red cannot modify scaffolded signatures** or `// AC:` comments. If a signature is untestable, red raises a dispute (decision A — architect revises).
 - **Green cannot modify scaffolded signatures** or add new exported symbols. Green may add **private (unexported)** helpers; logged in `RETRO.md helpers_added:` for retroactive coverage in a sub-sprint.
 
-## SCAFFOLD Definition of Done (for the architect)
-
-A scaffolding pass is **done** only when **every** item below is verifiable. Red cannot start until all are met:
-
-- [ ] Every exported type required by the feature exists in code.
-- [ ] Every exported interface exists with all method signatures (no method bodies — interfaces only).
-- [ ] Every exported constructor / factory / function exists with its full signature.
-- [ ] Every function body is exactly one of: `panic("not implemented: <feature-slug>/<fn-name>")` or a typed zero-value return. **No partial implementation.** No conditional logic, no helper calls, no early returns.
-- [ ] Every body that maps to an acceptance criterion has `// AC: <description>` + `// TODO(impl-<slug>, ac-<NNN>)` immediately above. Numbering local to the feature, zero-padded to three digits, starting at `001`.
-- [ ] If the feature touches `pm_test_territories`, empty `func TestXxx(t *testing.T) {}` test skeletons are scaffolded for the PM passe 2 to fill.
-- [ ] `go build ./...` passes on the whole module (paste the output).
-- [ ] No production logic, no test assertions, no private helpers written.
-- [ ] Mocks regenerated for every new interface (via `scaffor` or the project's mock generator).
-- [ ] No exported symbol exists in the diff that isn't required by the feature.
-- [ ] `mechanical:` flag set in FEATURE.md frontmatter (R1). Rationale mandatory if `true`.
-- [ ] `## Relevant decisions` section added to FEATURE.md listing applicable DECISIONS and ADRs.
-- [ ] Commit follows the `Feature:` / `Task:` / `Authored-By: architect` convention.
-
-If any item cannot be satisfied, the architect opens a `.questions/` entry — never ships a partial scaffold.
+Detailed SCAFFOLD Definition of Done (the per-item checklist the architect ticks at end of scaffolding) lives in the `architect.md` agent spec.
 
 ---
 
@@ -152,7 +128,7 @@ The rule applies to **production-code feature work**. It does **not** apply to m
 | Behaviour changes covered by `// AC:` markers                         | Regenerating mocks after an interface change already decided    |
 |                                                                       | `complexity: mechanical` features (mono-agent task)             |
 
-When in doubt, classify **upward** (`standard` over `mechanical`). Under-classification is corrected by an in-flight upgrade dispute (type G); over-classification only wastes one cheap pair.
+When in doubt, classify **upward** (`standard` over `mechanical`).
 
 ## Tier fusion (anticipates bloc 3 of the refonte doc)
 
@@ -162,51 +138,15 @@ There is **one** `red` agent and **one** `green` agent (sonnet by default). The 
 Agent({ subagent_type: "red", model: "opus", description: "...", prompt: "..." })
 ```
 
-The agent's behaviour is unchanged — only the underlying model differs. This anticipates bloc 3 of the refonte doc; the user opted into it for v2.
+The agent's behaviour is unchanged — only the underlying model differs.
 
 ---
 
 # Commit cadence — ABSOLUTE RULE
 
-Each agent **commits after every completed task**, never in batches.
-
-- One commit per `<TASK_ID>` (one per `<slug>-T<NNN>-red`, one per `<slug>-T<NNN>-green`, one per `<slug>-scaffold`, one per `<slug>-pm2`, etc.).
-- A teammate finishing two tasks in a row produces two commits, not one squashed commit.
-- Do not defer commits to the end of a wave or end of sprint.
+Each agent **commits after every completed task**, never in batches. One commit per `<TASK_ID>`. A teammate finishing two tasks in a row produces two commits, not one squashed commit.
 
 This bounds the blast radius of an agent crash, rate-limit interruption, or session loss to **one task** instead of a whole wave.
-
----
-
-# Agent crash recovery — ABSOLUTE RULE
-
-When one or more teammates crash mid-wave (rate limit, session disconnect, OOM), follow this procedure before re-spawning. **Never** delete dirty state blindly.
-
-## 1. Inventory dirty state
-
-- `git status` — list every modified or untracked file.
-- For each dirty file, classify:
-  - **complete** — the task it belongs to is finished per its DoD; safe to commit.
-  - **partial** — task started, not finished; salvage decision needed.
-  - **stale** — leftover from a task that was already committed elsewhere; safe to revert.
-- Map dirty files → expected task scope using `SPRINT.md`. Files outside any in-flight task scope are suspect — investigate before touching.
-
-## 2. Salvage vs revert, per file
-
-- **Partial** file on a critical path of a downstream task → **salvage**: complete the minimum needed to satisfy the task DoD, then commit under the original `<TASK_ID>`.
-- **Partial** file non-load-bearing or duplicating work re-spawn will redo → **revert** that specific file (`git checkout -- <path>`).
-- **Stale** file → revert.
-- **Complete** file → commit under its `<TASK_ID>` immediately, before re-spawning anything.
-
-## 3. Re-spawn with narrowed scope
-
-- Exclude every task already committed (check `git log --grep="Task:"` for the sprint).
-- Exclude every task whose files were just salvaged-and-committed.
-- Pass the narrowed task list explicitly in the spawn prompt — do not let the agent infer scope from `SPRINT.md` alone.
-
-## 4. Document the crash
-
-Append a short entry to the sprint RETRO under `## Agent crashes (narrative)`: which agents, which wave, which tasks salvaged vs reverted, any lost work. This feeds the parallelization heuristic at retro time.
 
 ---
 
@@ -237,15 +177,13 @@ Task: <TASK_ID>
   - `<slug>-decision-review` (architect statuing a tactical DECISION).
   - `H<NNN>-red` (sub-sprint helper-coverage task).
 
-Multiple tasks in one commit: `Task: T003-green, T004-green` (rare; cadence rule normally precludes).
-
 **`Authored-By:` trailer** — mandatory whenever the commit:
 
 - Creates, modifies, or deletes any file under `.decisions/`.
 - Modifies the `mechanical:` field in any FEATURE.md frontmatter.
 - Modifies the `review.reviewed_by` field in any DECISION.
 
-Values: `architect` (architect's writes), `green` (green's tactical DECISIONS only). `check.sh` cross-checks `git blame` against the trailer (R6); mismatch is a CI block.
+Values: `architect` or `green`. `check.sh` cross-checks `git blame` against the trailer (R6); mismatch is a CI block. Full rules in the `decisions-and-adrs` skill.
 
 Branches: `<feature-slug>/<TASK_ID>-<short-description>` (e.g., `auth-login/T003-green-impl`).
 
@@ -295,7 +233,7 @@ What is **not** allowed:
 ## Principles
 
 - Work happens in sprints. Maintenance (typos, dep updates, linting, small refactors) can happen outside sprints.
-- Every non-trivial decision is documented either as a strategic ADR (`.adrs/`) or as a DECISION (`.decisions/`).
+- Every non-trivial decision is documented either as a strategic ADR (`.adrs/`) or as a DECISION (`.decisions/`). Format and R2/R6 rules in the `decisions-and-adrs` skill.
 - Blockers and open questions **always** require human input — no auto-resolution. No sprint, feature, or task starts while a blocker or open question is pending.
 - Red and green operate with **discipline-based** spec isolation. Cross-reading in-flight work is forbidden; the only handoff is committed code/tests.
 - DECISIONS and ADRs listed in FEATURE.md `## Relevant decisions` propagate naturally — every agent reads them via that section.
@@ -312,87 +250,27 @@ Owned by the **architect**. The directory replaces the v1 `OVERVIEW.md` with two
 
 Every agent **reads** `.architecture/`. Only the architect writes.
 
-The `pm_test_territories` declaration in `CONVENTIONS.md`:
+## Code markers — quick summary
 
-```yaml
-pm_test_territories:
-  - tests/e2e-api/
-  - tests/contract/
-  - "**/usecase/*_test.go"
-  - "**/usecases/*_test.go"
-```
+The intent of every feature lives in two marker conventions, declared in `.architecture/CONVENTIONS.md`:
 
-`check.sh` reads this block and rejects `// SCENARIO:` markers outside.
+- **`// AC: <criterion>` + `// TODO(impl-<feat>, ac-<NNN>)` + `panic("not implemented")`** — inlined by the architect during scaffolding above each scaffolded body that maps to an acceptance criterion.
+- **`// SCENARIO: <narrative>` + `// TODO(impl-<feat>, scenario-<NNN>)` + `t.Skip("not implemented")`** — inlined by the PM in passe 2 inside business test skeletons within `pm_test_territories`.
 
-## Decisions (.decisions/) — NEW in v2
+`<NNN>` is local to the feature, zero-padded to three digits, starting at `001`. Stable for the feature's lifetime.
 
-The decision log distinct from strategic ADRs. The architect writes strategic DECISIONS directly. Green may write **tactical** DECISIONS during implementation under R2 strict rules. The architect **statues** every tactical DECISION (`review.revisit: true`, `review.reviewed_by: null`) at the start of the next sprint via a Wave 1 task placed by the sprint-planner.
+**Detailed conventions, full lifecycle, and strict format rules live in `references/markers.md`.** Load when you need the exact format (architect during scaffolding, PM in passe 2, red and e2e-tester locating their work, reviewer pass 2 verifying alignment).
 
-`.decisions/INDEX.md`:
+## Decisions and ADRs — quick summary
 
-```markdown
-| ID            | Scope     | Status     | Title                            | Date       | Author    |
-|---------------|-----------|------------|----------------------------------|------------|-----------|
-| DECISION-042  | strategic | ACTIVE     | session storage backend          | 2026-04-15 | architect |
-| DECISION-051  | tactical  | ACTIVE     | session-id format choice         | 2026-04-27 | green     |
-```
+Two distinct stores:
 
-`.decisions/DECISION-NNN-<slug>.md` — two-zone frontmatter:
+- `.adrs/` — strategic ADRs only. Multi-feature, project-direction. Architect writes.
+- `.decisions/` — tactical or strategic DECISIONS, with two-zone frontmatter (zone author + zone review) and a review lifecycle. Architect writes strategic. Green writes tactical under R2 strict rules.
 
-```yaml
----
-# Zone author — writeable at creation only
-id: DECISION-051
-date: 2026-04-27
-scope: tactical          # tactical | strategic
-status: ACTIVE           # ACTIVE | SUPERSEDED
-author: green            # architect | green
-affects: [internal/auth/session.go]
+Every commit modifying `.decisions/` carries `Authored-By:` trailer (R6). Tactical DECISIONS by green are surfaced in `RETRO.md decisions_to_statue:` and statued by the architect at the start of the next sprint.
 
-# Zone review — writeable by architect only, post-creation
-review:
-  revisit: true          # green sets true at creation; architect may flip false
-  reviewed_by: null      # null at creation; "architect" after statuing
-  reviewed_at: null
-  outcome: null          # null | confirmed | reformulated | superseded
----
-
-# <Title>
-
-## Question
-## Decision
-## Rationale
-
-## Reformulated by architect
-(empty initially; filled at statue time if reformulating)
-```
-
-Every commit that creates or modifies anything under `.decisions/` carries the `Authored-By:` trailer (R6).
-
-### R2 — Tactical DECISIONS by green
-
-Green may write a tactical DECISION when **all four** hold:
-
-1. `scope: tactical` (never `strategic` — reserved for the architect).
-2. `review.revisit: true` at creation (never `false` initially).
-3. The decision is **necessary to unblock the current task** — not opportunistic.
-4. The DECISION-NNN is referenced in the code (a `// see DECISION-NNN` comment) or in the commit message body.
-
-The sprint-planner surfaces each unstatued tactical DECISION in `RETRO.md` `decisions_to_statue:` at retro processing. The next sprint's plan starts with a Wave 1 task for the architect to statue every entry. CI rejects a sprint that closes with `review.revisit: true` and `review.reviewed_by: null` on a DECISION older than one sprint window (`check.sh` enforces).
-
-The architect's three statuing outcomes:
-
-- **Confirm** — `review.outcome: confirmed`, `review.reviewed_by: architect`, `review.revisit: false`. Body untouched.
-- **Reformulate** — same review fields with `outcome: reformulated`. Rewrites `## Decision` and `## Rationale`. Fills `## Reformulated by architect`.
-- **Supersede** — `status: SUPERSEDED`, `review.outcome: superseded`. Creates `DECISION-MMM-*.md` that supersedes this one. Updates `INDEX.md`.
-
-The architect may also escalate a tactical DECISION to strategic if the scope turned out larger — promote `scope:` to `strategic` and possibly migrate to `.adrs/`.
-
-## ADRs (.adrs/) — strategic only
-
-Strategic, multi-feature, project-direction. Format unchanged from v1. `revisit: true` indicates an autonomous decision under uncertainty — picked up at retro for human review.
-
-Tactical decisions go to `.decisions/`, not `.adrs/`. Do not mix.
+**Format details, R2 strict rules, R6 three-level defence, and the architect's confirm/reformulate/supersede protocol live in the `decisions-and-adrs` skill** — loaded by architect, green, and sprint-planner only. Other agents read DECISION/ADR files freely without that skill.
 
 ## Features (.features/)
 
@@ -412,7 +290,7 @@ Tactical decisions go to `.decisions/`, not `.adrs/`. Do not mix.
 ---
 title: <feature-slug>
 status: ready
-mechanical: false       # set by architect at end of scaffolding
+mechanical: false       # set by architect at end of scaffolding (R1)
 # mechanical_rationale: <only if mechanical: true>
 ---
 
@@ -434,53 +312,9 @@ mechanical: false       # set by architect at end of scaffolding
 
 The architect adds **only** the `mechanical:` and `mechanical_rationale:` frontmatter fields and the `## Complexity`, `## Complexity rationale`, `## Relevant decisions` body sections. The PM owns everything else.
 
-## Code markers — NEW in v2
-
-The intent of every feature lives in two marker conventions, declared in `.architecture/CONVENTIONS.md`:
-
-### `// AC:` — Acceptance Criterion (architect inlines, above scaffolded body)
-
-```go
-// AC: <one-line description of the criterion>
-// TODO(impl-<feature-slug>, ac-<NNN>)
-func (s *LoginService) Authenticate(ctx context.Context, c Credentials) (Session, error) {
-    panic("not implemented: auth-login/Authenticate")
-}
-```
-
-`<NNN>` zero-padded to three digits, local to the feature, starting at `001`. Stable for the feature's lifetime.
-
-### `// SCENARIO:` — User-journey scenario (PM passe 2 inlines, in `pm_test_territories`)
-
-```go
-func TestLogin_ValidCredentials(t *testing.T) {
-    // SCENARIO: Marie logs in with valid credentials and lands on her dashboard
-    // TODO(impl-auth-login, scenario-001)
-    t.Skip("not implemented")
-}
-```
-
-`<NNN>` zero-padded, local to the feature, starting at `001`. Stable.
-
-### Lifecycle of a marker
-
-- **Architect scaffolds** — adds `// AC:` + `panic`. AC marker present, body panics.
-- **PM passe 2** — adds `// SCENARIO:` + `t.Skip` in business test skeletons (skipped if `mechanical: true`).
-- **Red** — locates `TODO(impl-<slug>, ac-<NNN>)`, writes failing assertions in the matching test file. For business tests, replaces only the `t.Skip` line — keeps `// SCENARIO:` and `// TODO(impl-...)` comments above.
-- **Green** — replaces `panic("not implemented: ...")` with implementation. `// AC:` comment stays in place.
-- **E2E-tester** — locates `TODO(impl-<slug>, scenario-<NNN>)`, replaces `t.Skip` with real e2e assertions. `// SCENARIO:` and `// TODO(impl-...)` stay.
-- **Reviewer pass 2** — verifies every `// SCENARIO:` traces to a `# User journey` passage; every `# User journey` passage that warrants coverage has a `// SCENARIO:`.
-- **Once a feature is `done`**: the `TODO(impl-<slug>, ...)` markers must be **removed** from code (the implementation is in; the TODO is no longer accurate). `check.sh` in CI mode rejects a feature `done` in INDEX.md with leftover `TODO(impl-<slug>, ...)`.
-
 ## Tasks — by code marker (no TASK*.md files)
 
-Every red/green/e2e task corresponds to one `TODO(impl-<slug>, ac-<NNN>)` or `TODO(impl-<slug>, scenario-<NNN>)` marker in the code. The agent locates its work via:
-
-```bash
-grep -rn "TODO(impl-auth-login, ac-001)" .
-```
-
-The match points at the scaffolded body (for `ac-`) or the test skeleton (for `scenario-`). The agent's contract is the surrounding inline `// AC:` or `// SCENARIO:` description plus FEATURE.md `# User journey` and applicable DECISIONS / ADRs.
+Every red/green/e2e task corresponds to one `TODO(impl-<slug>, ac-<NNN>)` or `TODO(impl-<slug>, scenario-<NNN>)` marker in the code. The agent locates its work via `grep`.
 
 There are **no** `TASK.md`, `TASK-red.md`, `TASK-green.md`, `SCAFFOLD.md`, or per-feature `TASKS.md` files. Anyone tempted to create one should stop — the v2 convention is markers in code, not prose intermediaries. Spec isolation is preserved by discipline.
 
@@ -488,7 +322,7 @@ There are **no** `TASK.md`, `TASK-red.md`, `TASK-green.md`, `SCAFFOLD.md`, or pe
 
 The sprint-planner routes per the `task-complexity-routing` skill:
 
-- `mechanical` → **mono-agent task**. Single line in SPRINT.md execution plan. No red/green pair. The architect (or a mono green) does both scaffolding and implementation. Reviewer at end. Pipeline shape minimal.
+- `mechanical` → **mono-agent task**. Single line in SPRINT.md execution plan. No red/green pair.
 - `standard` → **reduced pipeline**. Architect scaffolds → PM passe 2 (if `mechanical: false`) → red → green → e2e-tester (if `mechanical: false`) → reviewer.
 - `architectural` → **full pipeline**. Same as standard plus a mandatory strategic ADR before scaffolding starts.
 
@@ -504,70 +338,23 @@ The sprint-planner routes per the `task-complexity-routing` skill:
 - **Feature REVIEW** (one per feature): reviewer's three passes, signs off `done` in INDEX.md.
 - **Sprint REVIEW** (one per sprint): reviewer's cross-cutting checks.
 - **Sprint retro** (one per sprint): sprint-planner generates `## Metrics` + YAML.
-- **Architect DECISION-statuing** (when previous retro has `decisions_to_statue:` non-empty): Wave 1 task in the new sprint; architect confirms / reformulates / supersedes each pending tactical DECISION.
+- **Architect DECISION-statuing** (when previous retro has `decisions_to_statue:` non-empty): Wave 1 task in the new sprint.
 
 ## Reviews (.features/<slug>/REVIEW.md and .sprints/SPRINT_00X/REVIEW.md)
 
-Two sections:
+The **reviewer** agent produces these. Two sections per file:
 
-- `## Findings` — the reviewer's three passes.
-- `## Human override` — human-only, strict 5-field format. Empty by default.
+- `## Findings` — the reviewer's three passes (DoD via `scripts/check.sh`, Scenarios narrative-vs-tests, Security checklist).
+- `## Human override` — human-only, strict 5-field format (R3). Empty by default.
 
-### Three passes
-
-**Pass 1 — DoD (technical).** Invokes `scripts/check.sh --mode ci`. Verifies golangci-lint, go test, go build, go vet, marker linting, `.decisions/` format, `## Human override` 5-field format, security-override Decision reference, `Authored-By:` trailer cross-check, `--no-verify` audit, INDEX.md ↔ reality coherence, unstatued tactical DECISIONS, `mechanical:` flag presence on scaffolded+ features.
-
-**Pass 2 — Scenarios (business).** For each `// SCENARIO:` marker, locate the matching `# User journey` passage and verify alignment. For `mechanical: true` features, confirm zero `// SCENARIO:` markers exist. Identify user-journey passages without scenario coverage.
-
-**Pass 3 — Security.** Walk the fixed checklist:
-
-1. IDOR / object-level authz.
-2. Authn / authz on every entry point.
-3. SSRF.
-4. Injection — SQL.
-5. Injection — command / shell.
-6. Injection — template.
-7. Secrets in clear (logs, errors).
-8. Input validation at the boundary.
-9. Internal-error exposure.
-
-Each item: `applied` / `non-applicable` / **`missing`** with `path:line` if missing.
-
-### `## Human override` — strict format (R3)
-
-```markdown
-## Human override
-
-### Override 001
-
-- **Finding overridden:** internal/auth/handler.go:42 — input validation missing
-- **Reason:** Validated upstream by the API gateway per DECISION-018; no need to duplicate in the handler.
-- **Decision reference:** DECISION-018
-- **Date:** 2026-04-29
-- **Author:** lugagne.jeremy
-```
-
-The reviewer **never** writes in `## Human override`. `check.sh` enforces the 5 fields at pre-commit and CI; security-finding overrides without a `Decision reference` are blocked.
-
-### Sprint-level cross-cutting checks
-
-- All feature REVIEWs done.
-- DECISIONS and ADRs consistent (no contradictions; superseding chains explicit).
-- All blockers, questions, disputes resolved (with full `## Acknowledgements`).
-- Helpers logged in `RETRO.md helpers_added:`.
-- Tactical DECISIONS scheduled to statue: every `decisions_to_statue:` from previous sprint is now statued.
-- RETRO.md YAML frontmatter complete.
-- Push timing respected.
-- Mono-assistant boundary respected.
-- Scope SSOT (SPRINT.md is authoritative).
-- `go test ./...` and `golangci-lint` green on `main`.
+**Detailed three-pass procedure, sprint-level cross-cutting checks, and `## Human override` format live in the `reviewer.md` agent spec.** The skill provides only the high-level summary and R3 below.
 
 ## Sprints (.sprints/)
 
 - `INDEX.md` — sprints with start/end dates and status.
 - `SPRINT_00X/SPRINT.md` — focus, features, execution plan as todo list **with code markers**.
 - `SPRINT_00X/REVIEW.md` — sprint review checklist.
-- `SPRINT_00X/RETRO.md` — retrospective.
+- `SPRINT_00X/RETRO.md` — retrospective (YAML frontmatter + `## Metrics` by sprint-planner + `## Reflection` by human).
 - Sub-sprints `SPRINT_00X-Y` — micro-work that can't wait (helper coverage, tooling).
 
 ### Scope: single source of truth — ABSOLUTE RULE
@@ -584,73 +371,7 @@ Rules:
 - The sprint-planner edits `SPRINT.md`. No other agent edits it.
 - A change to scope mid-sprint (added unplanned task, descoped feature) is made in `SPRINT.md` first; `.features/INDEX.md` reflects derived status only.
 
-### Retrospective (RETRO.md)
-
-YAML frontmatter (sprint-planner) + prose `## Metrics` (sprint-planner) + prose `## Reflection` (human, never auto-filled).
-
-```markdown
----
-sprint: SPRINT_00X
-metrics:
-  planned_tasks: 14
-  delivered_tasks: 13
-  unplanned_tasks: 1
-  disputes_raised: 2
-  disputes_resolved: 2
-  disputes_by_type: { A: 0, B: 1, C: 1, D: 0, E: 0, F: 0, G: 0 }
-  agent_crashes: 0
-  rework_commits: 2
-helpers_added:
-  - feature: auth-login
-    package: internal/auth
-    task: TODO(impl-auth-login, ac-002)
-    symbol: hashPassword
-    file: internal/auth/password.go
-    rationale: bcrypt wrapping isolated for clarity
-decisions_to_statue:
-  - id: DECISION-051
-    author: green
-    affects: [internal/auth/session.go]
-    raised_in_task: TODO(impl-auth-login, ac-001)
-    rationale: session-id format choice needed during impl
-crashes: []
-adrs_to_revisit: []
-complexity_routing:
-  classification_accuracy: { correct: 12, total: 14 }
-  upgrades: []
-  observed_downgrades: []
-  heuristic_adjustments: []
-template_extensions: []
----
-
-# Sprint 00X — Retrospective
-
-## Metrics
-[Sprint-planner — narrative summary derived from YAML.]
-
-## Reflection
-[Human-only. Empty until the human writes.]
-```
-
-### How the sprint-planner uses this
-
-- **Sub-sprint planning**: `helpers_added:` drives auto-creation of `SPRINT_00X-A` (helper coverage). One `H<NNN>-red` task per helper.
-- **DECISIONS to statue**: `decisions_to_statue:` drives the Wave 1 task block in the next sprint for the architect.
-- **Cross-sprint health**: trends in `disputes_raised`, `agent_crashes`, `rework_commits` flag drift.
-- **Calibration**: `complexity_routing:` feeds the `task-complexity-routing` skill's heuristics.
-
-A retro without YAML frontmatter is **invalid**; the sprint review checklist rejects it.
-
-## Sub-sprints (.sprints/SPRINT_00X-Y/)
-
-For micro-work that can't wait, including **retroactive test coverage of private helpers**:
-
-- Created by the sprint-planner after reading the main sprint's RETRO.
-- Contains `H<NNN>-red` tasks (red-only, no green pair — helpers already exist).
-- Tests must **pass** against existing helper implementations (exception to the normal "tests must fail" rule).
-- DoD: each listed helper has tests, tests pass, coverage meets target.
-
-Sub-sprint `SPRINT.md` cross-links back to the main sprint retro section that triggered it.
+**RETRO.md YAML schema, sub-sprint helper-coverage protocol, and tooling-extension routing live in the `sprint-planner.md` agent spec.**
 
 ## Bugs (.bugs/)
 
@@ -658,8 +379,8 @@ Sub-sprint `SPRINT.md` cross-links back to the main sprint retro section that tr
 
 The sprint-planner reads the report and routes:
 
-- **implementation-bug** → corrective task `<slug>-T<NNN>-bugfix` (red reproduces as failing test, green fixes). Goes into the current sprint as unplanned if blocking, or next sprint backlog.
-- **spec-bug** → `.questions/` for PM and/or architect. PM extends `# User journey`, architect revises `// AC:` and re-scaffolds. Then a new task pipeline.
+- **implementation-bug** → corrective task `<slug>-T<NNN>-bugfix` (red reproduces as failing test, green fixes).
+- **spec-bug** → `.questions/` for PM and/or architect. PM extends `# User journey`, architect revises `// AC:` and re-scaffolds.
 - **architectural-bug** → architect amends or supersedes a DECISION / ADR. No corrective task until the decision layer is consistent.
 
 Bug-detective is post-mortem; spec isolation rules don't apply to its reads (everything is committed).
@@ -689,20 +410,11 @@ blocking_scope: planning     # feature-DoR | sprint-kickoff | task | sprint | no
 [free text, written by the human or — for technical-only questions — by the architect]
 ```
 
-### Phase semantics
+Phase semantics:
 
-| `phase`    | When raised                                | Default `blocking_scope`           | Resolution deadline    |
-|------------|--------------------------------------------|-----------------------------------|------------------------|
-| `prep`     | While drafting FEATURE.md / DoR check      | `feature-DoR`                     | Before the feature reaches `ready` |
-| `planning` | While the sprint-planner authors SPRINT.md | `sprint-kickoff`                  | Before sprint kickoff   |
-| `execution`| Mid-sprint, while a task is in flight       | `task` (default) or `sprint`      | Before the dependent task closes (or sprint, if scope=sprint) |
-
-Rules:
-
-- A `prep` question blocks only the feature it references — other features can ship.
-- A `planning` question blocks the **entire sprint kickoff** until resolved.
-- An `execution` question with `blocking_scope: task` blocks only that task. Others proceed.
-- An `execution` question with `blocking_scope: sprint` blocks all dependent work and triggers a planner pause.
+- `prep` — drafted while writing FEATURE.md. Blocks the feature, not the sprint.
+- `planning` — raised while authoring SPRINT.md. Blocks sprint kickoff.
+- `execution` — mid-sprint. Default `blocking_scope: task` (only the task waits); `sprint` if the question reveals a missing DECISION (rare, triggers planner pause).
 
 ## Disputes (.disputes/SPRINT_00X/)
 
@@ -712,56 +424,19 @@ One file per disputed task, named after the marker:
 .disputes/SPRINT_00X/TODO_impl-auth-login_ac-001.md
 ```
 
-Sections: raising party's dispute, paired teammate's response, sprint-planner's decision, acknowledgements.
-
 The sprint-planner decides citing **only public artifacts** (the inlined `// AC:`, `// SCENARIO:`, FEATURE.md, ARCHITECTURE.md, DECISIONS, ADRs, scaffolded code, committed tests). There are no private specs to read in v2.
 
-Decision types A–G preserved from v1:
-
-- **A** — architect must revise (scaffold wrong, missing, or violates ARCHITECTURE.md / DECISIONS).
-- **B** — red must revise (test unfulfilable, contradicts `// AC:`, over-specifies beyond contract).
-- **C** — green must proceed under a stated interpretation.
-- **D** — both must adjust (rare).
-- **E** — escalate to architect via `.questions/` (gap in `.architecture/` or DECISIONS).
-- **F** — escalate to human via `.questions/`.
-- **G** — complexity upgrade. Default G-finish-then-escalate. G-immediate-rerun if current agent declares the task impossible at its assigned model. G-architect-loop if a missing DECISION is revealed.
-
-**Mid-task agent handoff is forbidden.** Either the current agent finishes (G-finish-then-escalate) or work is reverted (G-immediate-rerun).
-
-### Hat-switching declaration (mono-assistant safeguard)
-
-If the same assistant wears multiple roles in one session (e.g., red earlier, now arbitrating as sprint-planner), append a hat-switch marker at the top of the dispute file before reading any artifact:
-
-```markdown
-## Planner hat activated: 2026-04-25 by <assistant-id>
-Previous hats this session: red (TODO(impl-auth-login, ac-001))
-Confirms: will read only public artifacts (code, tests, FEATURE.md, ARCHITECTURE.md, DECISIONS, ADRs).
-```
-
-A dispute file missing this marker, written by an assistant who acted as red or green earlier, is invalid at retro and must be re-litigated.
-
-### Acknowledgement protocol
-
-Sprint-planner notifies every teammate listed in `Action required:` via teammate message. Each appends a line to `## Acknowledgements`. Status flips to `resolved` only when every teammate has acked. Sprint REVIEW.md rejects a `resolved` dispute lacking acks.
+**Decision types A–G, full arbitration procedure, hat-switching mono-assistant safeguard, and acknowledgement protocol live in the `sprint-planner.md` agent spec.** Agents that may raise disputes (architect, red, green, e2e-tester) cover their dispute-raising procedure in their own spec.
 
 ## Tooling feedback (.tools/<tool-name>/)
 
-Friction reports for tools (`go-surgeon`, `scaffor`, the workflow itself). Bug reports or improvement suggestions.
-
-### Template evolution (scaffor and similar)
-
-Scaffor templates and similar generator templates extend across sprints. Two routing modes depending on whether the extension is **blocking the current sprint**:
-
-- **Blocking extension** — file under `.blockers/SPRINT_00X/template-<name>.md`. Affected scaffold tasks stop until the extension lands. Extension lives on the dependent feature's branch with `Feature: maintenance`, `Task: tooling-<short>`.
-- **Non-blocking extension** — log under `template_extensions:` in the RETRO YAML with `blocking: false`. Sprint-planner aggregates non-blocking entries into `SPRINT_00X-tooling` after retro. No red/green pairing — architect-as-tooling + reviewer with `scaffor lint` + `scaffor test` gate.
-
-Reject inline edits with no record — template drift across sprints causes silent regressions.
+Friction reports for tools (`go-surgeon`, `scaffor`, the workflow itself). Bug reports or improvement suggestions. Template-evolution routing (blocking vs non-blocking) is detailed in the `sprint-planner.md` spec under retro processing.
 
 ---
 
-# Transverse rules R1 → R6 (mirror of `agile-team-refonte-bloc1.md`)
+# Transverse rules R1 → R6
 
-These rules cross-cut the workflow and are referenced throughout the agent specs.
+These rules cross-cut the workflow. Brief here; details in the agent specs that own the rule.
 
 ## R1 — `mechanical:` flag (architect's exclusive authority)
 
@@ -782,14 +457,9 @@ If `mechanical: true`: PM passe 2 is skipped, no `// SCENARIO:` markers expected
 
 ## R2 — Green's tactical DECISIONS
 
-Green may write a tactical DECISION under all four conditions:
+Summary: green may write a tactical DECISION under four strict conditions (`scope: tactical`, `revisit: true` at creation, necessary to unblock current task, DECISION-NNN referenced in code or commit). The architect statues each at the start of the next sprint via a Wave 1 task.
 
-1. `scope: tactical` (never `strategic`).
-2. `review.revisit: true` at creation.
-3. Necessary to unblock the current task (not opportunistic).
-4. DECISION-NNN referenced in code or commit message.
-
-The architect statues each unstatued tactical DECISION at the start of the next sprint via a Wave 1 task. CI rejects a sprint that closes with `review.reviewed_by: null` on a DECISION older than one sprint window.
+**Full rules, statuing outcomes (confirm/reformulate/supersede), and CI enforcement live in the `decisions-and-adrs` skill.**
 
 ## R3 — `## Human override` strict format
 
@@ -855,24 +525,19 @@ Status posted by the agent that **finishes** the step, never a supervisor:
 
 ## R6 — `.decisions/` zone review and `Authored-By:` trailer
 
-Three-level defence:
+Three-level defence (pre-commit YAML format → CI git-blame ↔ trailer cross-check → reviewer pass DoD sanity check). Mandatory trailer values: `architect` (for architect's writes), `green` (for green's tactical DECISIONS only).
 
-1. **Pre-commit hook** — verifies YAML zone format on `.decisions/` files. Blocks creation without `revisit: true`. Blocks zone-review modification without the four fields.
-2. **CI** — `git blame` on `review.reviewed_by` modifications must correspond to a commit with `Authored-By: architect`. Mismatch → CI block. Same for `mechanical:` ↔ `Authored-By: architect`.
-3. **Reviewer pass 1 (DoD)** — sanity check final: iterates over commits in the sprint window touching `.decisions/`, verifies trailer ↔ zone modification consistency. Mismatch → blocking finding.
-
-Trailer values: `architect` (architect's writes), `green` (green's tactical DECISIONS only). Never bypass with `--no-verify`.
+**Full three-level defence, declarative-vs-cryptographic discussion, and commit examples live in the `decisions-and-adrs` skill.**
 
 ---
 
 # Skill loading by role
 
-The `task-complexity-routing` skill is loaded only by agents that classify or route work:
+| Skill                          | Loaded by                                                     |
+|--------------------------------|---------------------------------------------------------------|
+| `agile-project` (this file)    | every agent                                                   |
+| `task-complexity-routing`      | product-manager, architect, sprint-planner                    |
+| `decisions-and-adrs`           | architect, green, sprint-planner                              |
+| `references/markers.md` (load on demand) | architect (scaffolding), product-manager (passe 2), red, e2e-tester, reviewer (pass 2) — when they need exact marker format |
 
-- `product-manager` — proposes initial complexity in FEATURE.md.
-- `architect` — confirms or amends complexity during DoR enrichment; sets the distinct `mechanical:` flag.
-- `sprint-planner` — decides pipeline routing at planning, arbitrates upgrade disputes (type G), calibrates at retro.
-
-The execution agents — `red`, `green`, `e2e-tester`, `reviewer`, `bug-detective` — do **not** load `task-complexity-routing`. They receive their pipeline assignment from the planner and do not make classification decisions. Loading an unnecessary skill bloats their context for no benefit.
-
-The `agile-project` skill (this file) is loaded by **every** agent in the workflow.
+Execution agents that don't classify or write decisions (red, e2e-tester, bug-detective, reviewer) carry minimal skill context. They consult `references/markers.md` ad-hoc.

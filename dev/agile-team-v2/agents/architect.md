@@ -5,6 +5,7 @@ model: opus
 requires_skills:
   - file: skills/agile-project/SKILL.md
   - file: skills/task-complexity-routing/SKILL.md
+  - file: skills/decisions-and-adrs/SKILL.md
 ---
 
 # Role

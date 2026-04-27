@@ -1,6 +1,9 @@
-# Code markers reference
+---
+name: markers
+description: "Use this skill whenever you need the exact format, lifecycle, or strict rules for the agile-team-v2 code markers — `// AC: <criterion>` + `// TODO(impl-<feature-slug>, ac-<NNN>)` + `panic(\"not implemented\")` (inlined by the architect during scaffolding above each scaffolded function body that maps to an acceptance criterion) and `// SCENARIO: <narrative>` + `// TODO(impl-<feature-slug>, scenario-<NNN>)` + `t.Skip(\"not implemented\")` (inlined by the PM in passe 2 inside business test skeletons under `pm_test_territories`). Covers the strict marker format that `check.sh` enforces (kebab-case feature-slug, three-digit zero-padded NNN, exact `ac-` or `scenario-` prefix), the `pm_test_territories` glob block declared in `.architecture/CONVENTIONS.md` (where `// SCENARIO:` markers may live), the seven-step marker lifecycle (architect scaffolds → PM passe 2 → red → green → e2e-tester → reviewer pass 2 → TODO removed when feature done while `// AC:` stays as permanent record), and the marker-based task lookup procedure (`grep -rn TODO(impl-...)` to locate the scaffolded body or test skeleton — replaces v1 TASK.md/TASK-red.md/TASK-green.md/SCAFFOLD.md prose intermediaries). Loaded by every agent that touches markers in any way: architect (writes `// AC:`), PM (writes `// SCENARIO:`), red (locates AC and writes assertions), green (reads AC and removes TODO when done), e2e-tester (locates SCENARIO and writes e2e assertions), reviewer (Pass 2 verifies marker ↔ user-journey alignment), sprint-planner (lists tasks by code marker in SPRINT.md). Bug-detective is the only agent that does not load this skill — it reads `// AC:` from committed code post-mortem without needing the format spec."
+---
 
-This file is a reference, not a skill. Load it when you need the full marker conventions and lifecycle. The agile-project SKILL.md points here.
+# Code markers
 
 The intent of every feature in agile-team-v2 lives in two marker conventions, declared in `.architecture/CONVENTIONS.md`. They are the contract between agents — replacing the v1 prose intermediaries (TASK.md, TASK-red.md, TASK-green.md, SCAFFOLD.md).
 

@@ -4,7 +4,7 @@ description: "End-to-end / integration test author. Writes one or more E2E scena
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
-  - file: skills/agile-project/references/markers.md
+  - file: skills/markers/SKILL.md
 ---
 
 # Role
@@ -28,7 +28,7 @@ Skipped entirely for features marked `mechanical: true` — those have no `// SC
    - [ ] e2e-tester — TODO(impl-auth-login, scenario-001)
    ```
 
-3. The marker location: `grep -rn "TODO(impl-auth-login, scenario-001)" .` resolves to a business test skeleton inside the `pm_test_territories` paths, carrying the PM's `// SCENARIO: <one-line narrative>` line and a `t.Skip("not implemented")` body. (Marker syntax + `pm_test_territories` glob: see `agile-project/references/markers.md`.)
+3. The marker location: `grep -rn "TODO(impl-auth-login, scenario-001)" .` resolves to a business test skeleton inside the `pm_test_territories` paths, carrying the PM's `// SCENARIO: <one-line narrative>` line and a `t.Skip("not implemented")` body. (Marker syntax + `pm_test_territories` glob: see `markers` skill.)
 
 4. The `// SCENARIO:` description on the test skeleton.
 

@@ -4,7 +4,7 @@ description: "Red-phase TDD agent (single tier — sonnet by default). Writes fa
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
-  - file: skills/agile-project/references/markers.md
+  - file: skills/markers/SKILL.md
   - file: skills/tdd-pattern/SKILL.md
 ---
 
@@ -28,9 +28,9 @@ Spec isolation between red and green is preserved by **discipline**:
 
 In this order, scoped tightly to your assigned task:
 
-1. The `agile-project` skill — workflow rules, marker conventions, dispute protocol. Marker syntax and lookup procedure live in `references/markers.md`.
+1. The `agile-project` skill — workflow rules, marker conventions, dispute protocol. Marker syntax and lookup procedure live in `markers` skill.
 2. `.sprints/SPRINT_00X/SPRINT.md` — find the task assigned to you (the line names your marker).
-3. The marker location in code — `grep` the marker string; the match points at the scaffolded body in production code (for `ac-` markers) or the test skeleton in `pm_test_territories` (for `scenario-` markers). See `references/markers.md` for the full lookup procedure.
+3. The marker location in code — `grep` the marker string; the match points at the scaffolded body in production code (for `ac-` markers) or the test skeleton in `pm_test_territories` (for `scenario-` markers). See `markers` skill for the full lookup procedure.
 4. The scaffolded function or method signature, the `// AC:` description above it, and the surrounding type definitions — read via `go-surgeon symbol`.
 5. For **business tests**: the test skeleton in `pm_test_territories` carrying the matching `// SCENARIO:` narrative — read via `go-surgeon symbol` on the test function.
 6. `.features/<slug>/FEATURE.md` `# User journey` — for context only, when the inlined narrative on its own is too short.
@@ -109,7 +109,7 @@ Commit format: `Feature: <slug>`, `Task: <slug>-T<NNN>-red`. Full commit-format 
 
 # Procedure
 
-1. Read SPRINT.md, locate your assigned marker (see `references/markers.md` for the syntax).
+1. Read SPRINT.md, locate your assigned marker (see `markers` skill for the syntax).
 2. `grep` for the marker in the codebase. The match points at:
    - For an `ac-` marker: a scaffolded production body with `// AC:` immediately above. The corresponding test file may be a sibling `*_test.go` in the same package, or — if the AC is part of a business flow — a skeleton in `pm_test_territories`.
    - For a `scenario-` marker: a business test skeleton in `pm_test_territories` carrying the PM's `t.Skip("not implemented")`.

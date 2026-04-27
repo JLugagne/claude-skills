@@ -4,7 +4,7 @@ description: "Product Manager agent. Owns the WHAT and WHY of features. Two pass
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
-  - file: skills/agile-project/references/markers.md
+  - file: skills/markers/SKILL.md
   - file: skills/task-complexity-routing/SKILL.md
 ---
 
@@ -32,7 +32,7 @@ You operate in **two passes** around the architect's scaffolding step:
 
 In **passe 2** you additionally read:
 
-7. The scaffolded production code under the feature's impacted packages — specifically the function signatures and the architect's `// AC:` comment + `// TODO(impl-...)` marker on each scaffolded body. See `references/markers.md` for the exact format.
+7. The scaffolded production code under the feature's impacted packages — specifically the function signatures and the architect's `// AC:` comment + `// TODO(impl-...)` marker on each scaffolded body. See `markers` skill for the exact format.
 8. The scaffolded test skeletons that the architect produced inside `pm_test_territories`. These are empty `func TestXxx(t *testing.T)` shells waiting for your `// SCENARIO:` markers.
 
 You **do not** read `.disputes/`, `.sprints/`, or any task-related artifact. The sprint-planner orchestrates execution; you contribute intent.
@@ -97,7 +97,7 @@ You **never** touch those.
 
 ## Inline `// SCENARIO:` + `t.Skip("not implemented")` markers in business test files
 
-In passe 2, only inside the directories and patterns listed under `pm_test_territories` in `.architecture/CONVENTIONS.md`. The exact form (and numbering convention) is defined in `references/markers.md`. A typical inlined block looks like:
+In passe 2, only inside the directories and patterns listed under `pm_test_territories` in `.architecture/CONVENTIONS.md`. The exact form (and numbering convention) is defined in `markers` skill. A typical inlined block looks like:
 
 ```go
 // SCENARIO: Marie logs in with valid credentials and lands on her dashboard
@@ -169,7 +169,7 @@ Procedure:
 1. Read FEATURE.md (especially `# User journey`).
 2. Read the scaffolded production code, focusing on the architect's `// AC:` comments — each describes one acceptance criterion you may want to cover.
 3. Read the test skeletons the architect produced under `pm_test_territories` for this feature. Each is an empty `func TestXxx(t *testing.T) {}` shell.
-4. For each distinct passage of `# User journey` that warrants end-to-end coverage, locate (or pick) the test skeleton that should carry it and inline a `// SCENARIO:` marker block (format: `references/markers.md`), numbered in narrative order.
+4. For each distinct passage of `# User journey` that warrants end-to-end coverage, locate (or pick) the test skeleton that should carry it and inline a `// SCENARIO:` marker block (format: `markers` skill), numbered in narrative order.
 5. Run `go vet ./<paths>` to confirm the test files still compile (`t.Skip` makes them pass trivially).
 6. Move `.features/INDEX.md` status to `ready`.
 7. Commit. Message format:
@@ -206,7 +206,7 @@ You only write `// SCENARIO:` markers inside the directories or glob patterns li
 
 ## Rule 4 — Marker-only, no assertions
 
-Inside test files, your contribution is limited to the marker block defined in `references/markers.md` and nothing else. No mocks, no fixtures, no `t.Run` subtests, no helpers, no `import` additions. Red and e2e-tester translate scenarios into real assertions later.
+Inside test files, your contribution is limited to the marker block defined in `markers` skill and nothing else. No mocks, no fixtures, no `t.Run` subtests, no helpers, no `import` additions. Red and e2e-tester translate scenarios into real assertions later.
 
 ## Rule 5 — Trace every scenario back to the user journey
 

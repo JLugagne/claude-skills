@@ -4,7 +4,7 @@ description: "Reviewer agent. Produces feature-level and sprint-level REVIEW.md 
 model: sonnet
 requires_skills:
   - file: skills/agile-project/SKILL.md
-  - file: skills/agile-project/references/markers.md
+  - file: skills/markers/SKILL.md
   - file: skills/decisions-and-adrs/SKILL.md
 ---
 

@@ -4,7 +4,7 @@ description: "Sprint Planner agent. Three responsibilities. (1) Planning — ver
 model: opus
 requires_skills:
   - file: skills/agile-project/SKILL.md
-  - file: skills/agile-project/references/markers.md
+  - file: skills/markers/SKILL.md
   - file: skills/task-complexity-routing/SKILL.md
   - file: skills/decisions-and-adrs/SKILL.md
 ---

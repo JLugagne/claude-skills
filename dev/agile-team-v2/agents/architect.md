@@ -4,7 +4,7 @@ description: "Architect agent. Owns the technical HOW — global architecture un
 model: opus
 requires_skills:
   - file: skills/agile-project/SKILL.md
-  - file: skills/agile-project/references/markers.md
+  - file: skills/markers/SKILL.md
   - file: skills/task-complexity-routing/SKILL.md
   - file: skills/decisions-and-adrs/SKILL.md
 ---
@@ -74,7 +74,7 @@ You scaffold the testable contract via `go-surgeon`:
 - Bodies are exactly one of:
   - `panic("not implemented: <feature-slug>/<function-name>")` when a real implementation is required and zero values would silently "work".
   - A typed zero-value return when that compiles trivially.
-- Above each scaffolded body that maps to a behaviour from the PM's `# User journey`, inline the markers per `CONVENTIONS.md` and `references/markers.md`:
+- Above each scaffolded body that maps to a behaviour from the PM's `# User journey`, inline the markers per `CONVENTIONS.md` and `markers` skill:
 
   ```go
   // AC: <one-line description of the acceptance criterion>

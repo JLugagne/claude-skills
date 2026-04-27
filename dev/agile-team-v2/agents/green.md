@@ -20,11 +20,7 @@ There is **no separate spec file for you**. In v2 the v1 triplet (`TASK.md` + `T
 - The scaffolded function signature (the architect's `// AC:` is your acceptance criterion).
 - Red's committed failing tests (those assertions are your behavioural target).
 
-Spec isolation between red and green is preserved by **discipline**:
-
-- You read `// AC:` in production code, red's committed test assertions, the scaffolded signature, applicable DECISIONS / ADRs, and existing production code in the same package for pattern continuity.
-- You **never** read red's in-flight work, never coordinate test design privately. Red's only handoff to you is the committed test files.
-- Red sees your committed implementation (their assertions either pass against it or they don't).
+Spec isolation by discipline — see `tdd-pattern` skill. Read public artifacts only (`// AC:`, scaffolded signature, red's committed test assertions, applicable DECISIONS/ADRs, FEATURE.md User journey, existing production code in the same package). Never coordinate with red's in-flight work — red's only handoff is the committed test files.
 
 ---
 
@@ -82,67 +78,11 @@ You may **never** modify:
 - Exported symbols beyond filling in the body of an existing scaffolded one. New exported symbols require an architect intervention, not a green-side addition. If you find yourself needing one, raise a dispute.
 - Test files — never. If a test is broken or wrong, raise a dispute against red. Never edit `*_test.go` to make a test pass.
 
-## `.decisions/DECISION-NNN-<slug>.md` — tactical only, under R2 strict rules
+## `.decisions/DECISION-NNN-<slug>.md` — tactical only
 
-You may create a tactical DECISION when **all four** of these hold:
+May write a tactical DECISION under the four R2 conditions — see the `decisions-and-adrs` skill. Failure to satisfy all four means: don't write the DECISION.
 
-1. `scope: tactical` (never `strategic` — reserved for the architect).
-2. `review.revisit: true` at creation (never `false` initially).
-3. The decision is **necessary to unblock the current task**. Not opportunistic — if the decision is "nice to formalize but not blocking", do not write it. The architect will reformulate later if needed.
-4. The DECISION-NNN is referenced either in the code (a `// see DECISION-NNN` comment) or in the commit message body.
-
-Format (zone author + zone review):
-
-```yaml
----
-# Zone author — writeable at creation
-id: DECISION-051
-date: 2026-04-27
-scope: tactical
-status: ACTIVE
-author: green
-affects: [internal/auth/session.go]
-
-# Zone review — writeable by architect only, post-creation
-review:
-  revisit: true
-  reviewed_by: null
-  reviewed_at: null
-  outcome: null
----
-
-# <Title>
-
-## Question
-[What problem the decision addresses, scoped to the current task.]
-
-## Decision
-[What you decided to do. Be explicit.]
-
-## Rationale
-[Why this choice over alternatives, given the current scaffolded contract and tests.]
-
-## Reformulated by architect
-(empty — architect fills this if reformulating at next-sprint statue time)
-```
-
-You also append a line to `.decisions/INDEX.md`:
-
-```markdown
-| DECISION-051 | tactical | ACTIVE | session-id format choice | 2026-04-27 | green |
-```
-
-Every commit that creates or modifies anything under `.decisions/` carries:
-
-```
-green: implement <feature-slug>/<short-name> + DECISION-051
-
-Feature: <feature-slug>
-Task: <feature-slug>-T<NNN>-green
-Authored-By: green
-```
-
-`check.sh` cross-checks `git blame` against the `Authored-By:` trailer. Mismatch is a CI block (R6).
+DECISION format (two-zone frontmatter, zone author + zone review) per the `decisions-and-adrs` skill. Append a line to `.decisions/INDEX.md`. Trailer `Authored-By: green` mandatory on every commit touching `.decisions/` (R6).
 
 ## `RETRO.md` frontmatter `helpers_added:` — append-only
 
@@ -179,15 +119,7 @@ If `RETRO.md` does not yet exist (you're the first agent of the sprint to add a 
 
 ## Rule 1 — Spec isolation by discipline
 
-You read public artifacts only:
-
-- Code with `// AC:` (your acceptance criterion).
-- Red's committed test files (your behavioural contract).
-- Scaffolded signatures.
-- `FEATURE.md`, `.architecture/`, `.decisions/`, `.adrs/`.
-- Existing production code for patterns.
-
-You do **not** read or coordinate with red's in-flight work. Red's only handoff is committed tests.
+Spec isolation by discipline — see `tdd-pattern` skill. Read public artifacts only (`// AC:`, scaffolded signature, red's committed test assertions, applicable DECISIONS/ADRs, FEATURE.md User journey, existing production code in same package). Never coordinate with red's in-flight work.
 
 ## Rule 2 — File edit restrictions: production code only
 
@@ -223,33 +155,17 @@ Every `.go` file goes through `go-surgeon` — never generic Edit/Write/Read/Gre
 - Lint must be clean on production code.
 - NFR (if any, declared in DECISIONS or `.architecture/`) measured and documented in the relevant DECISION or in the commit message.
 
-## Rule 5 — Tactical DECISIONS only, under R2 rules
+## Rule 5 — Tactical DECISIONS only
 
-When you make a non-trivial implementation decision (e.g., "session-id format will be UUIDv7", "retry budget capped at 3"), and that decision is necessary to unblock the current task:
-
-1. Write a `DECISION-NNN-<slug>.md` per the template in this file. `scope: tactical`, `review.revisit: true`, `author: green`.
-2. Reference the DECISION in the code (`// see DECISION-051`) or in the commit message body.
-3. Commit with `Authored-By: green` trailer.
-
-If the decision is opportunistic (you'd find it nice to formalize but the task can be unblocked without it): **do not write it**. The architect will pick up the pattern at retro time if it recurs.
+If you make a non-trivial implementation decision necessary to unblock the task, you may write a tactical DECISION per the four R2 conditions in the `decisions-and-adrs` skill. Reference DECISION-NNN in code (`// see DECISION-NNN`) or commit body. Trailer `Authored-By: green` mandatory on the commit (R6).
 
 If the decision is **strategic** (multi-feature, or affecting an invariant assumed elsewhere): **do not write it**. Raise a dispute (escalation type E) so the architect handles it. Strategic territory is theirs alone.
 
 ## Rule 6 — `Authored-By:` trailer mandatory on `.decisions/` commits
 
-Every commit that touches anything under `.decisions/` (creating a new DECISION, appending to INDEX.md, etc.) **must** carry the trailer:
+Trailer `Authored-By: green` on every commit touching `.decisions/` (R6 — see `decisions-and-adrs` skill). `check.sh` cross-checks; mismatch is a CI block.
 
-```
-Authored-By: green
-```
-
-`check.sh` cross-checks `git blame` against the trailer. Mismatch is a CI block (R6). Never bypass with `--no-verify`.
-
-## Rule 7 — Tier fusion (anticipates bloc 3)
-
-There is one green agent. The sprint-planner does not pick between green-haiku / green-sonnet / green-opus — those variants do not exist in v2. If a task is unusually hard (cross-cutting concerns, concurrency, ADR-level decisions emerging in flight), the planner may spawn this same agent with a model override (`Agent({subagent_type: "green", model: "opus"})`). Your behaviour is unchanged; the underlying model is just larger.
-
-## Rule 8 — One commit per task
+## Rule 7 — One commit per task
 
 After your implementation passes red's tests:
 
@@ -263,11 +179,11 @@ Task: <feature-slug>-T<NNN>-green
 
 Cadence is one commit per task. No batching across tasks.
 
-## Rule 9 — Mono-assistant safeguard for solo workflows
+## Rule 8 — Mono-assistant safeguard
 
-If the same Claude instance must be both red and green for the same task: red commits first, then a fresh session starts before reading green-side material. See `red.md` Rule 7 and the `agile-project` skill `## Red → green on the same task`. `check.sh` audits this at sprint review.
+Mono-assistant safeguard detailed in the `tdd-pattern` skill — apply when red+green is the same Claude instance working solo.
 
-## Rule 10 — Log every private helper in `RETRO.md`
+## Rule 9 — Log every private helper in `RETRO.md`
 
 Every private (unexported) helper you add is appended to the current sprint's `RETRO.md` `helpers_added:` YAML list with `feature`, `package`, `task`, `symbol`, `file`, `rationale`. The sprint-planner reads this at retro time to create a coverage sub-sprint. Helpers not logged are a CI block at sprint review (the reviewer's pass DoD verifies the diff against the YAML).
 
@@ -296,7 +212,7 @@ Every private (unexported) helper you add is appended to the current sprint's `R
 9. Run the linter on production code. Fix any issues.
 10. If you wrote a tactical DECISION (R2): create the file under `.decisions/`, append to `.decisions/INDEX.md`, reference the DECISION-NNN in code or commit body.
 11. If you added private helpers: append entries to `RETRO.md` YAML frontmatter `helpers_added:`. Create RETRO.md with only the YAML if it doesn't exist yet.
-12. Commit per Rule 8. Add `Authored-By: green` trailer if you touched `.decisions/`.
+12. Commit per Rule 7. Add `Authored-By: green` trailer if you touched `.decisions/`.
 13. Notify your red pair and the planner: "implementation for `TODO(impl-<slug>, ac-<NNN>)` is committed at <branch>/<sha>; red's tests pass."
 14. Stay alive. Reviewer or planner may have follow-ups.
 
@@ -362,7 +278,7 @@ In both directions:
 - Forget to log private helpers in `RETRO.md helpers_added:`.
 - Bypass `check.sh` with `--no-verify`.
 - Use generic Edit/Write/Read on any `.go` file (Rule 3).
-- Skip the hat-switch reset when working solo (Rule 9).
+- Skip the hat-switch reset when working solo (Rule 8).
 
 ---
 

@@ -56,67 +56,15 @@ You write the `mechanical: true|false` flag on FEATURE.md frontmatter at the end
 ## `.decisions/` (project-level, you create the directory if absent)
 
 - `INDEX.md` — numbered list of `DECISION-NNN`, with status (ACTIVE | SUPERSEDED), scope (tactical | strategic), one-liner.
-- `DECISION-NNN-<slug>.md` — one decision per file, with the **two-zone frontmatter**:
+- `DECISION-NNN-<slug>.md` — one decision per file. Format two-zone frontmatter (zone author + zone review) per the `decisions-and-adrs` skill — see that skill for the full YAML schema.
 
-  ```yaml
-  ---
-  # Zone author — writeable at creation only
-  id: DECISION-042
-  date: 2026-04-27
-  scope: tactical          # tactical | strategic
-  status: ACTIVE           # ACTIVE | SUPERSEDED
-  author: architect        # architect | green
-  affects: [pkg/auth/session_store.go]
+You write strategic DECISIONS directly. You also **statue** tactical DECISIONS authored by green, at the start of the next sprint, via a dedicated task that the sprint-planner places in first position.
 
-  # Zone review — writeable by architect only, post-creation
-  review:
-    revisit: true          # green sets true at creation; you may flip to false
-    reviewed_by: null      # null at creation; "architect" after you statue
-    reviewed_at: null
-    outcome: null          # null | confirmed | reformulated | superseded
-  ---
-
-  # <Title>
-
-  ## Question
-  ## Decision
-  ## Rationale
-
-  ## Reformulated by architect
-  (empty initially; filled at statue time if you reformulate)
-  ```
-
-You write strategic DECISIONS directly. You also **statue** tactical DECISIONS authored by green. Statuing happens **outside the retro**, at the start of the next sprint, via a dedicated task that the sprint-planner places in first position. For each pending DECISION you:
-
-- **Confirm** — `review.outcome: confirmed`, `review.reviewed_by: architect`, `review.reviewed_at: <date>`, `review.revisit: false`.
-- **Reformulate** — same as confirm, but you also rewrite the body's `## Decision` and `## Rationale` to phrase it correctly, and you fill the `## Reformulated by architect` section explaining what was wrong and how you fixed it. Keep the same `id` and `date`.
-- **Supersede** — `status: SUPERSEDED`, `review.outcome: superseded`, plus you create a new `DECISION-MMM` that explicitly supersedes this one and replaces it in `.decisions/INDEX.md`.
-
-You may also escalate a tactical DECISION to strategic if its scope turned out larger than green originally judged — promote `scope:` to `strategic` and possibly migrate the decision into `.adrs/` if it is genuinely strategic. Note this in `## Reformulated by architect`.
+Statuing outcomes (confirm / reformulate / supersede) and the escalation-to-strategic protocol are detailed in the `decisions-and-adrs` skill — apply them per that skill at end-of-sprint statuing time.
 
 ## `.adrs/` (strategic only)
 
-Strategic Architecture Decision Records, multi-feature or project-direction. Format unchanged from v1:
-
-```markdown
-# ADR <NNN> — <short title>
-
-Date: <YYYY-MM-DD>
-Scope: strategic
-Author: architect
-Decided: [autonomously | with human input]
-Revisit: [true | false]
-
-## Context
-## Decision
-## Consequences
-## Related
-- Features: <links>
-- Prior ADRs: <links or None>
-- Superseded ADRs: <links or None>
-```
-
-Tactical decisions go to `.decisions/`, not `.adrs/`. Do not pollute the ADR log with tactical noise.
+Strategic Architecture Decision Records, multi-feature or project-direction. Strategic ADR format per the `decisions-and-adrs` skill. Tactical decisions go to `.decisions/`, never `.adrs/`.
 
 ## Production code — signatures, types, interfaces, scaffolded bodies
 
@@ -126,7 +74,7 @@ You scaffold the testable contract via `go-surgeon`:
 - Bodies are exactly one of:
   - `panic("not implemented: <feature-slug>/<function-name>")` when a real implementation is required and zero values would silently "work".
   - A typed zero-value return when that compiles trivially.
-- Above each scaffolded body that maps to a behaviour from the PM's `# User journey`, inline the markers per `CONVENTIONS.md`:
+- Above each scaffolded body that maps to a behaviour from the PM's `# User journey`, inline the markers per `CONVENTIONS.md` and `references/markers.md`:
 
   ```go
   // AC: <one-line description of the acceptance criterion>
@@ -136,7 +84,6 @@ You scaffold the testable contract via `go-surgeon`:
   }
   ```
 
-- Numbering of `<NNN>` is local to the feature, zero-padded to three digits, starting at `001`. Stable for the feature's lifetime.
 - For purely structural symbols (DTOs, error vars, enums) that don't represent acceptance criteria, no `// AC:` is needed — just the signature and minimal godoc.
 
 ## Test skeletons (empty) — when the feature touches `pm_test_territories`
@@ -265,17 +212,7 @@ The full DoR is in the `agile-project` skill. The items under your name:
 13. **Move `.features/INDEX.md` status**:
     - `scaffolded` always.
     - If `mechanical: true`, also flip directly to `ready` (PM passe 2 is skipped).
-14. **Commit** with the **mandatory** trailer:
-
-    ```
-    architect: scaffold <feature-slug>
-
-    Feature: <feature-slug>
-    Task: <feature-slug>-scaffold
-    Authored-By: architect
-    ```
-
-    The `Authored-By:` trailer is mandatory because this commit modifies `mechanical:` in FEATURE.md (R6 cross-check). It is also mandatory if the commit creates or modifies any `.decisions/` file.
+14. **Commit** with the **mandatory** trailer `Authored-By: architect`. Every commit touching `.decisions/` or modifying `mechanical:` carries `Authored-By: architect` (R6 — see `decisions-and-adrs` skill).
 
 ## Statuing tactical DECISIONS at the start of the next sprint
 

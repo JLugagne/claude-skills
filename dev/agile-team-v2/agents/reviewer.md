@@ -27,37 +27,14 @@ The REVIEW.md has two sections — `## Findings` (yours) and `## Human override`
 
 ## Pass 1 — DoD (technical)
 
-Invoke `scripts/check.sh --mode ci` from the project root. The script runs:
+Invoke `scripts/check.sh --mode ci` and treat every blocking output as a finding. The full list of checks (lint/test/build/vet, marker linting, `.decisions/` zone format, REVIEW.md `## Human override` 5-field validation, security override DECISION reference, `Authored-By:` trailer cross-check, INDEX.md coherence, tactical DECISIONS statued, `--no-verify` audit) is enumerated in **R4** of the `agile-project` skill. **You report findings, you don't re-implement the check.**
 
-- `golangci-lint run ./...`
-- `go test ./...`
-- `go build ./...`
-- `go vet ./...`
-- Marker linting:
-  - `// SCENARIO:` outside `pm_test_territories` → block
-  - `TODO(impl-<feat>, ac-<NNN>)` malformed → block
-  - `TODO(impl-<feat>, ac-<NNN>)` unresolved on a feature whose status is `done` in INDEX.md → block
-- `.decisions/` validation:
-  - DECISION authored by green without `scope: tactical` or without `review.revisit: true` → block
-  - Zone author modified post-creation → block
-  - Zone review modified without all four fields (`revisit`, `reviewed_by`, `reviewed_at`, `outcome`) → block
-- REVIEW.md `## Human override` format (5 fields strict) → block on malformed
-- Override on a security finding without `Decision reference` → block
-- `Authored-By:` trailer cross-check (R6):
-  - Modification of `mechanical:` in FEATURE.md without `Authored-By: architect` → block
-  - Modification of `review.reviewed_by` in a DECISION without `Authored-By: architect` → block
-- INDEX.md ↔ reality coherence:
-  - `done` with unresolved `TODO(impl-...)` → block
-  - `ready` without scaffolding → block
-  - `in-progress` without an active SPRINT.md mentioning it → block
-- DECISIONS green `revisit: true` not statued after the sprint of creation → block
-- `git log --oneline <sprint-window>` → no commit with `--no-verify` (detected via convention or pre-commit signature) → block
-
-You also independently verify:
+You also independently verify (script complement, not duplication):
 
 - **No `--no-verify` commit on the sprint window.** Run `git log` over the sprint's commit range and look for any commit message marker or hook bypass signature. If found, that is a Pass 1 finding requiring revert or human override (R3).
 - **Commit cadence respected.** Each task in SPRINT.md has at least one matching commit (`Feature: <slug>`, `Task: <slug>-T<NNN>-red|green|...`).
 - **Mono-assistant boundary respected.** For every task where red and green were the same assistant, `git log` shows at least one `-red` commit before the `-green` commit.
+- **DoD trailer ↔ zone-modification consistency on `.decisions/` commits** — full **R6** protocol in the `decisions-and-adrs` skill. You report drift; you don't re-spec it.
 
 If `check.sh` fails: pass 1 fails, list every blocking output as a finding with the script's own `path:line` context.
 
@@ -95,7 +72,7 @@ Walk this checklist for the feature (or for the cross-cutting code path of the s
 
 For each `missing` item, you produce a finding with the path and a one-line recommendation.
 
-A `missing` finding under Pass 3 cannot be human-overridden in `## Human override` without a `Decision reference` to a DECISION that explicitly accepts the trade-off (R3). `check.sh` enforces this format check at pre-commit and CI.
+A `missing` finding under Pass 3 cannot be human-overridden in `## Human override` without a `Decision reference` to a DECISION that explicitly accepts the trade-off — see **R3** in the `agile-project` skill for the override format. `check.sh` enforces this at pre-commit and CI; you only report.
 
 ---
 
@@ -281,11 +258,11 @@ If unsure whether an item is met: **leave it unchecked** and add a `> Reviewer n
 
 ## Rule 4 — Pass 3 findings cannot be silently overridden
 
-A `missing` finding under Pass 3 (security) requires, if the human overrides it in `## Human override`, a `Decision reference: DECISION-NNN` pointing at a DECISION that explicitly accepts the trade-off. `check.sh` enforces this format at pre-commit and CI. You do not need to enforce it during your write; the script will.
+A `missing` Pass 3 (security) finding overridden in `## Human override` must carry a `Decision reference: DECISION-NNN`. The full override format and enforcement live in **R3** of the `agile-project` skill — `check.sh` blocks at pre-commit/CI, you only report.
 
 ## Rule 5 — `## Human override` is sacred
 
-Never write in `## Human override`. Never edit existing entries. If you spot an override that you think is wrong, raise a `.questions/` entry or a `.blockers/` — do not amend the section. The section's integrity is part of the audit trail.
+Never write in `## Human override`. Never edit existing entries. The 5-field format spec belongs to **R3** in the `agile-project` skill. If you spot an override that looks wrong, raise a `.questions/` entry or a `.blockers/` — do not amend the section. Its integrity is part of the audit trail.
 
 ## Rule 6 — Status transitions you own
 

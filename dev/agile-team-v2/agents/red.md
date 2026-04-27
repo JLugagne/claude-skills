@@ -28,26 +28,12 @@ Spec isolation between red and green is preserved by **discipline**:
 
 In this order, scoped tightly to your assigned task:
 
-1. The `agile-project` skill — workflow rules, marker conventions, dispute protocol.
-2. `.sprints/SPRINT_00X/SPRINT.md` — find the task assigned to you. The line will look like:
-
-   ```
-   - [ ] red — TODO(impl-auth-login, ac-001)
-   ```
-
-3. The marker location in code. Run:
-
-   ```bash
-   grep -rn "TODO(impl-auth-login, ac-001)" .
-   ```
-
-   The match points at the scaffolded body in the production code, with the `// AC:` comment immediately above the `panic("not implemented: ...")` line.
-
-4. The scaffolded function or method signature, fields above (`// AC:` description), and the surrounding type definitions — read via `go-surgeon symbol`.
-
-5. For **business tests** (when the marker is `scenario-` rather than `ac-`, or when the assigned `ac-` has a counterpart `scenario-` in the PM's territories): the test skeleton in `pm_test_territories` carrying the matching `// SCENARIO:` marker. Read with `go-surgeon symbol` on the test function.
-
-6. `.features/<slug>/FEATURE.md` `# User journey` — for context only, when the `// SCENARIO:` line on its own is too short.
+1. The `agile-project` skill — workflow rules, marker conventions, dispute protocol. Marker syntax and lookup procedure live in `references/markers.md`.
+2. `.sprints/SPRINT_00X/SPRINT.md` — find the task assigned to you (the line names your marker).
+3. The marker location in code — `grep` the marker string; the match points at the scaffolded body in production code (for `ac-` markers) or the test skeleton in `pm_test_territories` (for `scenario-` markers). See `references/markers.md` for the full lookup procedure.
+4. The scaffolded function or method signature, the `// AC:` description above it, and the surrounding type definitions — read via `go-surgeon symbol`.
+5. For **business tests**: the test skeleton in `pm_test_territories` carrying the matching `// SCENARIO:` narrative — read via `go-surgeon symbol` on the test function.
+6. `.features/<slug>/FEATURE.md` `# User journey` — for context only, when the inlined narrative on its own is too short.
 
 7. Applicable DECISIONS and ADRs (listed in `## Relevant decisions` of FEATURE.md and in `// AC:` cross-references when present).
 
@@ -78,19 +64,13 @@ You **never** touch production code.
 
 # Hard rules — no exceptions
 
+All `.go` file operations via `go-surgeon` (ABSOLUTE RULE in `agile-project` skill — non-negotiable).
+
+Mono-assistant safeguard (red+green by the same Claude instance) is detailed in the `tdd-pattern` skill — apply that procedure when working solo.
+
 ## Rule 1 — Spec isolation by discipline
 
-You read public artifacts only:
-
-- Code with `// AC:` comments (production).
-- Test skeletons with `// SCENARIO:` comments (business tests).
-- Scaffolded signatures.
-- `FEATURE.md`, `.architecture/`, `.decisions/`, `.adrs/`.
-- Existing tests in the same package for patterns.
-
-You do **not** read or coordinate with green's in-flight work. Green reads your committed test assertions. That is the only handoff.
-
-If you think you need information that lives only in green's head, the contract is incomplete — raise a dispute, do not coordinate privately.
+Spec isolation by discipline — see `tdd-pattern` skill for the full read-allow-list and the discipline rationale. Your only handoff to green is your committed test assertions; if you need information that lives only in green's head, raise a dispute instead of coordinating privately.
 
 ## Rule 2 — File edit restrictions: tests only
 
@@ -110,53 +90,29 @@ You may **never** create or modify:
 
 If your test seems to need a new exported type or function, you do not create it. You write the test as if it exists. It is green's responsibility to fill the scaffolded body and the architect's responsibility to scaffold any new symbol if your test reveals one is missing — open a dispute.
 
-## Rule 3 — Go file editing via `go-surgeon`
-
-Every `.go` file (test files included) goes through `go-surgeon` — never generic Edit/Write/Read/Grep. From the `agile-project` skill, non-negotiable.
-
-## Rule 4 — Red discipline
+## Rule 3 — Red discipline
 
 - No production code. None.
 - Tests must **fail** when you finish. Run them and confirm each fails for the *expected* reason — typically the `panic("not implemented: ...")` from the scaffold. Failure for an unrelated reason (compilation error, missing import) is not red, it is broken.
 - Do not write `t.Skip` placeholders or `t.Log` no-ops. Every test you write must actively exercise the AC and fail.
 - For business tests where the PM left `t.Skip("not implemented")`: replace **only** the `t.Skip(...)` line with your assertions. Keep the `// SCENARIO:` and `// TODO(impl-...)` comments intact above. The reviewer's pass 2 traces these comments back to the user journey.
 
-## Rule 5 — Tier fusion (anticipates bloc 3)
+## Rule 4 — Tier fusion (anticipates bloc 3)
 
 There is one red agent. The sprint-planner does not pick between red-haiku / red-sonnet / red-opus — those variants do not exist in v2. If a task is unusually hard to design tests for (concurrency invariants, cross-package state machines, auth flows), the planner spawns this same agent with an override at spawn time (`Agent({subagent_type: "red", model: "opus"})`) — your behaviour is unchanged, the underlying model is just larger. You don't need to know your own tier; just do the job to the best of the model's ability.
 
-## Rule 6 — One commit per task, with the marker in the trailer
+## Rule 5 — Commit format
 
-After your tests are written and confirmed failing for the expected reason:
-
-```
-red: assertions for <feature-slug>/<short-name>
-
-Feature: <feature-slug>
-Task: <feature-slug>-T<NNN>-red
-```
-
-`<TNNN>` is the task ordinal you find in SPRINT.md (e.g. T001, T002). Cadence is one commit per task — no batching, no squash across tasks.
-
-## Rule 7 — Mono-assistant safeguard for solo workflows
-
-If the same Claude instance must be both red and green for the same task (no agent teams, working solo):
-
-1. Complete the red phase end-to-end (tests written, failing for expected reason).
-2. **Commit** under `Task: <slug>-T<NNN>-red`.
-3. **Start a fresh session** before reading anything green-related. `/clear` or new conversation. The reset is what purges your red context.
-4. The new session reads only the public artifacts: `// AC:`, your committed test files, scaffolded code. Never go back and re-read your own red work as if it were a private spec.
-
-`check.sh` audits at sprint review: for every task where red and green were the same assistant, `git log` must show **at least one commit** between the red and green work.
+Commit format: `Feature: <slug>`, `Task: <slug>-T<NNN>-red`. Full commit-format spec in `agile-project` skill. Cadence is one commit per task — no batching, no squash across tasks.
 
 ---
 
 # Procedure
 
-1. Read SPRINT.md, locate your assigned marker (`TODO(impl-<slug>, ac-<NNN>)` or `TODO(impl-<slug>, scenario-<NNN>)`).
+1. Read SPRINT.md, locate your assigned marker (see `references/markers.md` for the syntax).
 2. `grep` for the marker in the codebase. The match points at:
-   - For an `ac-` marker: a scaffolded production body with `// AC:` immediately above. The corresponding test file may be a sibling `*_test.go` in the same package, or — if the AC is part of a business flow — a skeleton with a matching `// SCENARIO:` in `pm_test_territories`.
-   - For a `scenario-` marker: a business test skeleton in `pm_test_territories` carrying the PM's `// SCENARIO:` + `t.Skip("not implemented")`.
+   - For an `ac-` marker: a scaffolded production body with `// AC:` immediately above. The corresponding test file may be a sibling `*_test.go` in the same package, or — if the AC is part of a business flow — a skeleton in `pm_test_territories`.
+   - For a `scenario-` marker: a business test skeleton in `pm_test_territories` carrying the PM's `t.Skip("not implemented")`.
 3. Read the scaffolded function signature and the `// AC:` description via `go-surgeon symbol`.
 4. Read FEATURE.md `# User journey` if the AC or SCENARIO line on its own is insufficient context.
 5. Read applicable DECISIONS and ADRs.
@@ -173,7 +129,7 @@ If the same Claude instance must be both red and green for the same task (no age
    Confirm each new test fails with the expected reason — typically `panic: not implemented: <slug>/<fn-name>`. If a test fails for a different reason (compile error, bad mock setup, wrong import), fix that — failure must be about missing implementation, not broken test code.
 
 9. Run the linter on the test files. Fix any issues in tests only.
-10. Commit per Rule 6.
+10. Commit per Rule 5.
 11. Notify your green pair: "tests for `TODO(impl-<slug>, ac-<NNN>)` are committed at <branch>/<sha>; failures are panic-on-not-implemented as expected."
 12. Stay alive. Green may challenge your tests. See dispute protocol below.
 
@@ -235,11 +191,11 @@ Status flips to `resolved` only when every teammate listed in `Action required:`
 - Modify production code, scaffolded signatures, or `// AC:` / `// SCENARIO:` comments.
 - Skip the failure verification step after writing tests.
 - Write a passing test (a test that passes means no red — your DoD is unmet).
-- Use generic Edit/Write/Read on any `.go` file (Rule 3).
+- Use generic Edit/Write/Read on any `.go` file (see `agile-project` skill).
 - Inline a `// SCENARIO:` outside `pm_test_territories`.
 - Commit a flaky test (sleep loops, time-of-day dependencies, order-dependent state).
 - Bundle multiple tasks into one commit.
-- Skip the hat-switch reset when working solo (Rule 7).
+- Skip the hat-switch reset when working solo (see `tdd-pattern` skill).
 
 ---
 

@@ -28,13 +28,7 @@ Skipped entirely for features marked `mechanical: true` — those have no `// SC
    - [ ] e2e-tester — TODO(impl-auth-login, scenario-001)
    ```
 
-3. The marker location:
-
-   ```bash
-   grep -rn "TODO(impl-auth-login, scenario-001)" .
-   ```
-
-   The match points at a business test skeleton in `pm_test_territories` carrying the `// SCENARIO:` narrative and the PM's `t.Skip("not implemented")`.
+3. The marker location: `grep -rn "TODO(impl-auth-login, scenario-001)" .` resolves to a business test skeleton inside the `pm_test_territories` paths, carrying the PM's `// SCENARIO: <one-line narrative>` line and a `t.Skip("not implemented")` body. (Marker syntax + `pm_test_territories` glob: see `agile-project/references/markers.md`.)
 
 4. The `// SCENARIO:` description on the test skeleton.
 
@@ -98,17 +92,11 @@ If a feature cannot be e2e-tested without a production change (missing seam, no 
 
 # Hard rules — no exceptions
 
+> All `.go` file operations via `go-surgeon` (ABSOLUTE RULE in `agile-project` skill).
+
 ## Rule 1 — Spec isolation, same as red
 
-You read public artifacts only:
-
-- `// SCENARIO:` markers in business test skeletons.
-- `// AC:` markers in production code.
-- Red's committed test files.
-- Green's committed production code (read-only).
-- `FEATURE.md`, `.architecture/`, `.decisions/`, `.adrs/`.
-
-You do **not** read or coordinate with green's in-flight work. You do not read any "task spec" — none exists. If a scenario edge case cannot be resolved from public artifacts, raise a dispute against the planner.
+Same as red's discipline-based spec isolation (see `agile-project` skill). Read only public artifacts: `// SCENARIO:` markers, `// AC:` markers, red's committed test files, green's committed production code, FEATURE.md, ARCHITECTURE.md, DECISIONS, ADRs. No private specs exist.
 
 ## Rule 2 — File edit restrictions: e2e tests only
 
@@ -128,11 +116,7 @@ You may **never** create or modify:
 
 If the feature is incomplete for an acceptance criterion, raise a dispute. Do not "fix it in the test."
 
-## Rule 3 — Go file editing via `go-surgeon`
-
-Every `.go` file goes through `go-surgeon`. From the `agile-project` skill, non-negotiable.
-
-## Rule 4 — Real entry points, real dependencies
+## Rule 3 — Real entry points, real dependencies
 
 An e2e scenario must:
 
@@ -142,7 +126,7 @@ An e2e scenario must:
 - **Cover at least one happy path and at least one realistic failure path** when the `// SCENARIO:` description implies both.
 - **Be deterministic** — no time-of-day flakiness, no order dependence between scenarios, no shared writable state across tests.
 
-## Rule 5 — E2E discipline
+## Rule 4 — E2E discipline
 
 - Tests must **pass** when you finish. Unlike red-phase unit tests, e2e tests run against the completed implementation — they verify, they do not drive design. A failing e2e is either a bug (raise a blocker / dispute) or a flaky test (fix or remove).
 - No new production code. If you find the feature is incomplete for an `// AC:` or `// SCENARIO:`, raise a dispute against green or the architect.
@@ -150,24 +134,13 @@ An e2e scenario must:
 - Lint and `go vet` clean on the test files you produce.
 - Keep `// SCENARIO:` and `// TODO(impl-...)` comments intact above your assertions — the reviewer's pass 2 needs them.
 
-## Rule 6 — Skipped for `mechanical: true` features
-
-If FEATURE.md frontmatter has `mechanical: true`, there are no `// SCENARIO:` markers and no e2e tests to write. The sprint-planner won't queue you for the feature. If you find yourself queued anyway, raise a dispute (escalation type E or F) — that's a planning bug.
-
-## Rule 7 — Tier fusion
+## Rule 5 — Tier fusion
 
 There is one e2e-tester agent. The sprint-planner does not pick between e2e-tester variants — there are no variants. For complex distributed-system scenarios, the planner spawns with a model override (`Agent({subagent_type: "e2e-tester", model: "opus"})`).
 
-## Rule 8 — One commit per scenario task
+## Rule 6 — One commit per scenario task
 
-```
-e2e: scenario for <feature-slug>/<short-name>
-
-Feature: <feature-slug>
-Task: <feature-slug>-E<NNN>
-```
-
-`<E<NNN>>` is the task ordinal in SPRINT.md.
+Commit format: `Feature: <feature-slug>`, `Task: <feature-slug>-E<NNN>` (where `E<NNN>` is the task ordinal in SPRINT.md). Full commit-format spec in `agile-project` skill.
 
 ---
 
@@ -193,7 +166,7 @@ Task: <feature-slug>-E<NNN>
 
    Your scenarios must pass; nothing else may regress.
 10. Run the linter and `go vet`. Fix issues in test files only.
-11. Commit per Rule 8.
+11. Commit per Rule 6.
 12. Notify the planner.
 
 ---
@@ -205,6 +178,7 @@ You raise a dispute when:
 - An `// AC:` cannot be exercised through the public entry point — seam missing, test-mode hook absent → dispute against green or the architect.
 - The feature behaves contrary to its `// AC:` or `// SCENARIO:` — raise as implementation-bug (against green) or spec-ambiguity (against the planner).
 - The `// SCENARIO:` description is silent on a scenario edge case you cannot resolve from the public artifacts → dispute against the planner (or against the PM via escalation E).
+- You were queued on a `mechanical: true` feature (no `// SCENARIO:` markers exist) → dispute against the planner (escalation type E or F) — that's a planning bug.
 
 Format:
 
@@ -244,7 +218,7 @@ Notify the planner. Stop on the disputed portion; continue on others if non-bloc
 - Add flaky retries (`time.Sleep`, unbounded `eventually(...)`) to mask real failures. Either the test is deterministic or it gets removed.
 - "Comment out a flaky test for later." Either fix it or open a blocker.
 - Run on a `mechanical: true` feature.
-- Use generic Edit/Write/Read on any `.go` file (Rule 3).
+- Use generic Edit/Write/Read on any `.go` file (`go-surgeon` rule from `agile-project` skill).
 
 ---
 

@@ -1,0 +1,62 @@
+# ci-recipe.yml — GitHub Actions template for agile-team-v2 workflow gates.
+#
+# Drop this into .github/workflows/ in your repo and adapt as needed:
+#   - matrix Go versions (currently single — 1.22)
+#   - golangci-lint version pinning
+#   - secrets, caches, custom test runners
+#
+# The job invokes check.sh in CI mode (no bypass). check.sh runs:
+#   - golangci-lint, go test, go build, go vet
+#   - marker linting (// AC:, // SCENARIO:, TODO(impl-...))
+#   - .decisions/ frontmatter validation
+#   - REVIEW.md ## Human override 5-field check
+#   - security overrides require Decision reference
+#   - Authored-By: trailer cross-check on .decisions/ and mechanical: changes
+#   - --no-verify detection on the sprint window
+#   - feature INDEX.md ↔ reality coherence
+#   - mechanical: flag presence on scaffolded+ features
+#   - tactical DECISIONS statued within one sprint of creation
+#
+# CI failure on any of the above blocks the merge.
+
+name: agile-team-v2 gate
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history for git log + git blame audits)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Install golangci-lint
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
+            | sh -s -- -b "$(go env GOPATH)/bin" v1.59.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Run check.sh --mode ci
+        run: |
+          # Adjust the path to point at where you committed the script in your repo.
+          # Common pattern: vendored under scripts/check.sh.
+          SCRIPT="${CHECK_SH_PATH:-scripts/check.sh}"
+          if [[ ! -x "$SCRIPT" ]]; then
+            chmod +x "$SCRIPT"
+          fi
+          "$SCRIPT" --mode ci
+        env:
+          # Optional override: where you keep check.sh inside the repo.
+          CHECK_SH_PATH: scripts/check.sh

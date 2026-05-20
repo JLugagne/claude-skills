@@ -1,3 +1,12 @@
+---
+description: File-based kanban skill for vibe coding — persistent task system across LLM sessions with milestone/epic/task hierarchy, append-only decision logs, and minimal shell tooling.
+tags:
+  - kanban
+  - project-management
+  - vibe-coding
+  - productivity
+---
+
 # kanban — a file-based kanban skill for vibe coding
 
 A Claude Code skill that gives the LLM a persistent task system across sessions. Tasks live as Markdown files with YAML front matter; the board emerges from the filesystem.

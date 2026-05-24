@@ -38,6 +38,14 @@ case "$CMD" in
         fi
         exec "$SCRIPT_DIR/dump.sh" "$2"
         ;;
+    check)
+        if [ -z "${2:-}" ]; then
+            echo "Error: check requires a task file path" >&2
+            echo "Usage: task.sh check <path-to-task.md>" >&2
+            exit 1
+        fi
+        exec "$SCRIPT_DIR/check.sh" "$2"
+        ;;
     ""|help|--help|-h)
         cat <<EOF
 task.sh — minimal kanban CLI
@@ -45,6 +53,7 @@ task.sh — minimal kanban CLI
 Usage:
   task.sh status              Overview of all milestones
   task.sh dump <milestone>    JSON dump of all tasks in a milestone
+  task.sh check <task-path>   Verify a task is safe to close (all Actions+DoD [x])
 
 See the kanban skill's references/scripts.md for details.
 EOF

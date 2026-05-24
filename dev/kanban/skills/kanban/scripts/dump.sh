@@ -69,20 +69,39 @@ get_blocked_by() {
         jq -R . | jq -s .
 }
 
-# Count checkboxes in the ## Todo section
-count_checkboxes() {
+# Count checkboxes in a named section (## Section header → next ## or EOF)
+count_section() {
     local file="$1"
-    awk '
-        /^## Todo/ { in_todo=1; next }
-        /^## / && in_todo { in_todo=0 }
-        in_todo && /^- \[x\]/ { done++ }
-        in_todo && /^- \[ \]/ { open++ }
-        in_todo && /^- \[!\]/ { blocked++ }
+    local section="$2"
+    awk -v section="$section" '
+        $0 == "## " section { in_section=1; next }
+        /^## / && in_section { in_section=0 }
+        in_section && /^- \[x\]/ { done++ }
+        in_section && /^- \[ \]/ { open++ }
+        in_section && /^- \[!\]/ { blocked++ }
         END {
             printf "{\"done\":%d,\"open\":%d,\"blocked\":%d}",
                 (done+0), (open+0), (blocked+0)
         }
     ' "$file"
+}
+
+# Backwards-compat: also count ## Todo (legacy v1 schema). If a file has both
+# ## Todo and ## Actions, ## Actions wins (returned as action_stats).
+count_actions() {
+    local file="$1"
+    local actions_count
+    actions_count=$(count_section "$file" "Actions")
+    # If Actions section is empty (no checkboxes at all), try the legacy Todo section.
+    if [ "$actions_count" = '{"done":0,"open":0,"blocked":0}' ]; then
+        local has_actions
+        has_actions=$(awk '/^## Actions$/ { found=1 } END { print (found ? "yes" : "no") }' "$file")
+        if [ "$has_actions" = "no" ]; then
+            count_section "$file" "Todo"
+            return
+        fi
+    fi
+    echo "$actions_count"
 }
 
 # Collect all task files
@@ -101,9 +120,12 @@ for f in "${task_files[@]}"; do
     epic=$(get_field "$f" "epic")
     status=$(get_field "$f" "status")
     priority=$(get_field "$f" "priority")
+    type_field=$(get_field "$f" "type")
+    [ -z "$type_field" ] && type_field="feature"
     branch=$(get_field "$f" "branch")
     blocked_by=$(get_blocked_by "$f")
-    todo_stats=$(count_checkboxes "$f")
+    action_stats=$(count_actions "$f")
+    dod_stats=$(count_section "$f" "Definition of Done")
 
     task_obj=$(jq -n \
         --arg id "$id" \
@@ -113,14 +135,17 @@ for f in "${task_files[@]}"; do
         --arg epic "$epic" \
         --arg status "$status" \
         --arg priority "$priority" \
+        --arg type "$type_field" \
         --arg branch "$branch" \
         --arg path "$f" \
         --argjson blocked_by "$blocked_by" \
-        --argjson todo_stats "$todo_stats" \
+        --argjson action_stats "$action_stats" \
+        --argjson dod_stats "$dod_stats" \
         '{id: $id, title: $title, description: $description,
           milestone: $milestone, epic: $epic, status: $status,
-          priority: $priority, blocked_by: $blocked_by,
-          branch: $branch, path: $path, todo_stats: $todo_stats}')
+          priority: $priority, type: $type, blocked_by: $blocked_by,
+          branch: $branch, path: $path,
+          action_stats: $action_stats, dod_stats: $dod_stats}')
 
     tasks_json=$(echo "$tasks_json" | jq --argjson t "$task_obj" '. += [$t]')
 done

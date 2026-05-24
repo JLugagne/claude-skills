@@ -54,9 +54,11 @@ The milestone argument must match a folder name exactly (including the `M<N>-` p
     "epic": "oauth",
     "status": "done",
     "priority": "high",
+    "type": "feature",
     "blocked_by": [],
     "branch": "task/TASK-001-oauth-client",
-    "todo_stats": {"done": 5, "open": 0, "blocked": 0}
+    "action_stats": {"done": 5, "open": 0, "blocked": 0},
+    "dod_stats": {"done": 4, "open": 0, "blocked": 0}
   },
   {
     "id": "TASK-002",
@@ -67,14 +69,16 @@ The milestone argument must match a folder name exactly (including the `M<N>-` p
     "epic": "oauth",
     "status": "in_progress",
     "priority": "high",
+    "type": "feature",
     "blocked_by": [],
     "branch": "task/TASK-002-refresh",
-    "todo_stats": {"done": 2, "open": 3, "blocked": 1}
+    "action_stats": {"done": 2, "open": 3, "blocked": 1},
+    "dod_stats": {"done": 1, "open": 4, "blocked": 0}
   }
 ]
 ```
 
-`todo_stats` is computed on the fly by counting `[x]`, `[ ]`, and `[!]` checkboxes in the task body. The script does this because grepping is fast and cheap; doing it from the LLM would be wasteful.
+`action_stats` and `dod_stats` are computed on the fly by counting `[x]`, `[ ]`, and `[!]` checkboxes within the `## Actions` and `## Definition of Done` sections respectively. **Both must be fully `done` (all `[x]`, no `open` or `blocked`) before the task can be marked `status: done`.**
 
 **When to use:**
 - After `status`, to pick the next task (filter by `status: in_progress` or `todo`, sort by `priority`).
@@ -88,13 +92,63 @@ The milestone argument must match a folder name exactly (including the `M<N>-` p
 
 ## Reading a task body
 
-There is no `task.sh show` command on purpose. To read a task's full Markdown (front matter + Todo + Discussion):
+There is no `task.sh show` command on purpose. To read a task's full Markdown (front matter + Actions + DoD + Discussion):
 
 ```bash
 cat .tasks/M1-auth/oauth/TASK-002.md
 ```
 
 Or use the file-reading tool with the `path` from `dump` output.
+
+## `task.sh check <task-path>`
+
+Verify a task is safe to close. This is the mechanical safety net before flipping `status: done`.
+
+**Usage:**
+```bash
+./scripts/task.sh check .tasks/M1-auth/oauth/TASK-002.md
+```
+
+**Output (passing):**
+```
+Task:   TASK-002 - Implement refresh token rotation
+Type:   feature
+Status: in_progress
+Actions: 5/5 done (0 open, 0 blocked)
+DoD:     4/4 done (0 open, 0 blocked)
+
+OK: task is closeable
+```
+
+Exit code 0.
+
+**Output (failing):**
+```
+Task:   TASK-002 - Implement refresh token rotation
+Type:   feature
+Status: in_progress
+Actions: 3/5 done (1 open, 1 blocked)
+DoD:     2/4 done (2 open, 0 blocked)
+
+NOT CLOSEABLE:
+  - Unchecked Actions: 1 items still [ ]
+  - Blocked Actions: 1 items marked [!]
+  - Unchecked DoD: 2 items still [ ]
+```
+
+Exit code 1.
+
+**When to use:**
+- Always before flipping a task to `status: done` (see `closing-task.md`).
+- In CI as a pre-merge check on PRs that touch `.tasks/`.
+- Anytime you want to sanity-check a task you think is done.
+
+**Rules enforced:**
+- Every Actions item must be `[x]` (no `[ ]`, no `[!]`).
+- Every DoD item must be `[x]` (no `[ ]`, no `[!]`).
+- `feature`, `integration-verify`, and `bugfix` tasks must have at least 1 DoD item.
+
+If `check` returns non-zero, you cannot close the task. Fix the underlying issues first.
 
 ## Writing the next task ID
 
@@ -115,6 +169,7 @@ There is no `task.sh set-status` or similar — direct file editing is simpler a
 ## Gotchas
 
 - `task.sh dump` will error if the milestone folder doesn't exist. Check `status` output first if unsure.
-- `todo_stats` only counts checkboxes inside the `## Todo` section, not anywhere else in the file. If you put checkboxes in `## Discussion`, they'll be ignored — which is the intended behavior.
+- `action_stats` only counts checkboxes inside the `## Actions` section; `dod_stats` only counts checkboxes inside `## Definition of Done`. Checkboxes anywhere else in the file are ignored — including in `## Discussion`, which is intended behavior.
 - The scripts assume `.tasks/` exists at the current working directory. Run them from the repo root.
 - The scripts use `jq` for JSON output. If `jq` isn't installed, they'll error with an install hint.
+- Tasks created before the v2 schema (with `## Todo` instead of `## Actions` + `## Definition of Done`) will show `action_stats` based on their `## Todo` section if present, and `dod_stats` of zero. Migrate them when convenient.

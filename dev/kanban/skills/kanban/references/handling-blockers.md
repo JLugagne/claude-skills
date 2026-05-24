@@ -6,19 +6,22 @@ Used when work on a task can't proceed because of an external dependency, missin
 
 ## Two kinds of blockers
 
-1. **Item-level blocker** — one specific Todo item is blocked, but other items in the task can still proceed.
+1. **Item-level blocker** — one specific Actions or DoD item is blocked, but other items in the task can still proceed.
 2. **Task-level blocker** — the whole task can't move forward.
 
 The handling differs.
 
 ## Item-level blocker
 
-Change the checkbox from `[ ]` to `[!]` and append the cause in parentheses:
+Change the checkbox from `[ ]` to `[!]` and append the cause in parentheses. This works for both Actions and DoD items:
 
 ```markdown
+## Actions
 - [!] Migrate existing tokens to new format (waiting on TASK-040 to ship)
 - [!] Verify rate limits in prod (waiting on staging access)
-- [!] Update Stripe webhook handler (Stripe API v2026-04 not yet released)
+
+## Definition of Done
+- [!] Test `TestRateLimitedRefresh` passes (test requires staging access, blocked)
 ```
 
 Keep working on the other items. The task stays `in_progress`. When the blocker clears, change `[!]` back to `[ ]` (or directly to `[x]` if completing it immediately) and continue.
@@ -27,11 +30,11 @@ If the blocker is another task in the kanban, *also* add its ID to the task's `b
 
 ## Task-level blocker
 
-If no Todo items can proceed:
+If no Actions or DoD items can proceed:
 
 ```
 - [ ] Update status from in_progress to blocked
-- [ ] Make sure all blocking Todo items are marked [!] with the cause
+- [ ] Make sure all blocking items (in Actions and DoD) are marked [!] with the cause
 - [ ] If the blocker is another task, add its ID to blocked_by
 - [ ] Add a Discussion entry explaining the blocker and the expected resolution
 - [ ] Inform the user that the task is blocked and on what
@@ -43,7 +46,7 @@ Example Discussion entry:
 ### 2026-05-22 — Blocked on TASK-040
 Cannot proceed with token migration until TASK-040 (new token format) is done.
 Stopping here; will resume when TASK-040 ships.
-Open items remaining: 3 (all marked [!]).
+Open items remaining: 3 (all marked [!] in Actions or DoD).
 ```
 
 ## When the blocker clears

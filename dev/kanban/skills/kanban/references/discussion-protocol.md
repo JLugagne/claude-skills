@@ -17,6 +17,8 @@ Concrete triggers:
 - Naming that wasn't obvious and the alternatives matter.
 - Tradeoffs explicitly accepted (e.g. "we picked simpler over faster because X").
 - Constraints discovered mid-task that affect the design.
+- **Changes to the Definition of Done after the task started.** Always log these. A moved DoD item is a moved goalpost; without a Discussion entry, the change is invisible.
+- **Discovery that a DoD item is impossible or wrong.** Same logic — moving away from a DoD must leave a trace.
 - Anything you almost did differently — the "almost" is worth recording.
 
 Do NOT log:

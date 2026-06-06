@@ -12,13 +12,14 @@ Used when the user wants to add work to an epic that already exists, without goi
 - [ ] Read the milestone's PRD.md (Integration contract, Success criteria)
 - [ ] Read the epic's doc.md (Acceptance criteria, constraints, design decisions)
 - [ ] Decide the task type (feature, integration-verify, chore, bugfix)
-- [ ] Allocate next ID from .tasks/.next-id
-- [ ] Create TASK-NNN.md with full front matter, empty Actions, empty Definition of Done, empty Discussion
-- [ ] Set status based on context: todo if ready to start now, backlog otherwise
-- [ ] Identify any blocked_by relationships with existing tasks
-- [ ] Update .tasks/.next-id
+- [ ] Scaffold with `task.sh new <milestone> <epic> "<title>" --type <type>` (allocates the
+      ID and writes valid front matter + empty sections — no manual ID bookkeeping)
+- [ ] Set status based on context: todo if ready to start now, backlog otherwise (--status)
+- [ ] Identify any blocked_by relationships with existing tasks (edit the field after scaffolding)
 - [ ] Confirm to the user: ID, title, type, status, where it lives
 ```
+
+`task.sh new` replaces the old manual "read `.next-id`, write the file, bump `.next-id`" dance. You can still hand-author a file if you need an unusual shape — just keep the front matter exactly as `structure.md` specifies.
 
 ## When to draft Actions and DoD items
 
@@ -34,6 +35,16 @@ If the description is high-level ("add health checks"), leave Actions and DoD em
 - `bugfix` — fixes a defect. **MUST have a regression test in DoD.** This is the most important rule for bugfix tasks — without a regression test, the bug will silently come back.
 
 If you're not sure between `feature` and `chore`, lean `feature`. Chore is for truly internal work that doesn't affect behavior.
+
+### Standalone chores without an epic
+
+For genuinely one-off work that doesn't belong to any epic (pin a CI version, delete a stray comment, bump a dep), don't manufacture an epic. Scaffold the task directly under the milestone:
+
+```bash
+task.sh new M1-auth - "Pin CI Go version to 1.26" --type chore
+```
+
+The `-` for the epic argument puts the file at `.tasks/M1-auth/TASK-099.md` with an empty `epic:` field (see `structure.md`). This is the answer to "a full PRD + epic + DoD is wildly out of proportion to a 2-line fix." Keep feature work inside epics, though — only chores/bugfixes should go loose, and only when they really don't fit an epic.
 
 ## Status decision
 

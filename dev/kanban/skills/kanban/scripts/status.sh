@@ -1,8 +1,21 @@
 #!/usr/bin/env bash
 # status.sh — print overview of all milestones with task counts per status
+# Usage:
+#   status.sh           text overview (default)
+#   status.sh --json    machine-readable JSON array
 set -euo pipefail
 
 TASKS_DIR="${TASKS_DIR:-.tasks}"
+
+FORMAT="text"
+if [ "${1:-}" = "--json" ]; then
+    FORMAT="json"
+fi
+
+if [ "$FORMAT" = "json" ] && ! command -v jq >/dev/null 2>&1; then
+    echo "Error: jq is required for --json output but is not installed." >&2
+    exit 1
+fi
 
 # Extract a YAML field value from the front matter of a markdown file.
 # Front matter is delimited by --- lines at the start of the file.
@@ -33,10 +46,16 @@ while IFS= read -r -d '' dir; do
 done < <(find "$TASKS_DIR" -maxdepth 1 -type d -name 'M[0-9]*-*' -print0 | sort -z)
 
 if [ ${#milestones[@]} -eq 0 ]; then
-    echo "No milestones found in $TASKS_DIR/"
-    echo "Create one with a folder like '$TASKS_DIR/M1-<slug>/'"
+    if [ "$FORMAT" = "json" ]; then
+        echo "[]"
+    else
+        echo "No milestones found in $TASKS_DIR/"
+        echo "Create one with a folder like '$TASKS_DIR/M1-<slug>/'"
+    fi
     exit 0
 fi
+
+json_out="[]"
 
 for ms in "${milestones[@]}"; do
     declare -A counts=(
@@ -58,14 +77,34 @@ for ms in "${milestones[@]}"; do
         total=$((total + 1))
     done < <(find "$TASKS_DIR/$ms" -type f -name 'TASK-*.md' -print0)
 
-    printf "%-20s %3d tasks   %d done, %d in_progress, %d todo, %d blocked, %d backlog" \
-        "$ms" "$total" \
-        "${counts[done]}" "${counts[in_progress]}" "${counts[todo]}" "${counts[blocked]}" "${counts[backlog]}"
+    if [ "$FORMAT" = "json" ]; then
+        obj=$(jq -n \
+            --arg milestone "$ms" \
+            --argjson total "$total" \
+            --argjson backlog "${counts[backlog]}" \
+            --argjson todo "${counts[todo]}" \
+            --argjson in_progress "${counts[in_progress]}" \
+            --argjson blocked "${counts[blocked]}" \
+            --argjson done "${counts[done]}" \
+            --argjson cancelled "${counts[cancelled]}" \
+            '{milestone: $milestone, total: $total,
+              done: $done, in_progress: $in_progress, todo: $todo,
+              blocked: $blocked, backlog: $backlog, cancelled: $cancelled}')
+        json_out=$(echo "$json_out" | jq --argjson o "$obj" '. += [$o]')
+    else
+        printf "%-20s %3d tasks   %d done, %d in_progress, %d todo, %d blocked, %d backlog" \
+            "$ms" "$total" \
+            "${counts[done]}" "${counts[in_progress]}" "${counts[todo]}" "${counts[blocked]}" "${counts[backlog]}"
 
-    if [ "${counts[cancelled]}" -gt 0 ]; then
-        printf ", %d cancelled" "${counts[cancelled]}"
+        if [ "${counts[cancelled]}" -gt 0 ]; then
+            printf ", %d cancelled" "${counts[cancelled]}"
+        fi
+        echo
     fi
-    echo
 
     unset counts
 done
+
+if [ "$FORMAT" = "json" ]; then
+    echo "$json_out"
+fi

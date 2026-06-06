@@ -47,14 +47,17 @@ The board is therefore optimized for the LLM's reading patterns, not human dashb
 
 ## Tooling
 
-Two shell commands live in `scripts/`. They are intentionally minimal — the LLM does the filtering and reasoning, the scripts just expose the filesystem efficiently:
+Shell commands live in `scripts/` (run via the `task.sh` dispatcher). They are intentionally minimal — the LLM does the filtering and reasoning, the scripts just expose the filesystem efficiently and enforce the few mechanical invariants:
 
-| Command                         | Purpose                                      |
-| ------------------------------- | -------------------------------------------- |
-| `task.sh status`                | Overview of all milestones (counts per status). Always run this at session start. |
-| `task.sh dump <milestone>`      | JSON of all tasks in a milestone, including DoD progress. Used to pick a task, search, or plan. |
+| Command                            | Purpose                                      |
+| ---------------------------------- | -------------------------------------------- |
+| `task.sh status [--json]`          | Overview of all milestones (counts per status). Always run this at session start. `--json` for machine-readable output. |
+| `task.sh dump <milestone>`         | JSON of all tasks in a milestone, including DoD progress. Used to pick a task, search, or plan. |
+| `task.sh check <task-path>`        | Verify a task is safe to close: all Actions+DoD `[x]`, plus any `\| run:` verification commands pass. |
+| `task.sh new <ms> <epic> "<t>"`    | Scaffold a valid task file and allocate its ID. Use `-` for the epic to put a standalone chore directly under the milestone. |
+| `task.sh validate [milestone]`     | Structural integrity check: ids match filenames, fields match folders, `blocked_by`/`verifies` references exist. |
 
-To read a specific task's full content, use `cat` (or the `view` tool) on the path returned by `dump`. No dedicated `show` command — the LLM already has file-reading tools.
+The scripts ship executable; if they aren't, `chmod +x scripts/*.sh`. To read a specific task's full content, use `cat` (or the `view` tool) on the path returned by `dump` — no dedicated `show` command, the LLM already has file-reading tools.
 
 To capture the branch associated with a task, write it directly to the `branch:` front matter field when moving the task to `in_progress`. `git log <branch>` reconstructs the commit list on demand, fresh — no need to cache commits in the front matter (a rebase or squash-merge would make any cached list lie).
 
@@ -67,7 +70,8 @@ The skill is split across multiple reference files so only what's relevant gets 
 | If the user...                                              | Read                                |
 | ----------------------------------------------------------- | ----------------------------------- |
 | asks for a new feature / "build X" / "add support for Y"    | `references/creating-feature.md` (and `milestone-planning.md`) |
-| wants to add a task to an existing epic                     | `references/creating-task.md`       |
+| wants to add a task to an existing epic, or a one-off chore/fix | `references/creating-task.md`    |
+| wants to verify the board's structural integrity (`task.sh validate`) | `references/scripts.md`    |
 | asks "what should I work on" / "what's next" (no specific task) | `references/selecting-task.md`  |
 | names a task to work on (or you've just selected one)       | `references/working-on-task.md`     |
 | is about to make a non-trivial design or architectural choice | `references/discussion-protocol.md` |
@@ -100,6 +104,10 @@ A handful of invariants apply across every workflow. Internalize these even when
 7. **Every DoD item must be mechanically verifiable.** "Code looks clean" is not a DoD; "test `TestX` passes" or "function `Y` is called from `Z` (verified by grep or test)" is. See `references/definition-of-done.md`.
 
 8. **Integration-verify tasks exist to close gaps between unit deliverables.** At the end of each epic (and sometimes mid-epic), include a task with `type: integration-verify` whose only job is to prove the previous tasks work together. See `references/definition-of-done.md`.
+
+9. **Make DoD items executable whenever possible.** Append `| run: <command>` to a DoD item and `task.sh check` runs it, refusing to close on a non-zero exit. This turns honest closing from a discipline into a machine-enforced guarantee — use it for tests, builds, vet/lint, and grep-based wiring checks. See `references/definition-of-done.md`.
+
+10. **An agent never closes its own task.** The author prepares the close (boxes honest, `task.sh check` green, committed) but a *different* agent/model — or, failing that, the user — runs the close audit and flips `status: done`. Self-marked homework is the board's core trust gap. If no reviewer is available, tell the user the task is ready for review rather than self-closing. See `references/closing-task.md`.
 
 ## Communication style
 

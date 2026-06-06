@@ -30,6 +30,7 @@ Rules:
 - Task IDs are global (not per-milestone): `TASK-001`, `TASK-002`, etc. Zero-padded to 3 digits.
 - Task filename is exactly the ID: `TASK-042.md`.
 - Each epic folder contains a `doc.md` (the epic brief) plus its task files.
+- **Standalone tasks may live directly under a milestone folder** (`.tasks/M1-auth/TASK-099.md`, no epic). This is for one-off `chore`/`bugfix` work that doesn't warrant an epic — a CI pin, a stray-comment removal. Such tasks have an empty `epic:` field. Don't use this for feature work: features belong in an epic so the integration-verify gate can cover them.
 - `.next-id` holds the highest assigned ID so far, as a plain integer (e.g. `42`). Used by scripts to allocate the next ID.
 
 ## Task front matter
@@ -143,6 +144,16 @@ Standard DoD patterns:
 - **Migration applied**: `` - [ ] Migration `003_X` applied, table `T` has column `C` ``
 - **Coverage of failure case**: `- [ ] When DB connection drops mid-write, request returns 503 (verified by integration test)`
 - **No regression**: `- [ ] All previously-passing tests still pass`
+
+**Make it executable when you can.** Append `| run: <command>` to any DoD item that is mechanically checkable; `task.sh check` runs the command and refuses to close on a non-zero exit:
+
+```markdown
+- [ ] Test `TestRefresh` passes | run: go test ./internal/auth -run TestRefresh
+- [ ] `RefreshHandler.Refresh` is wired | run: grep -rq "RefreshHandler.Refresh" internal/
+- [ ] `go vet` is clean | run: go vet ./...
+```
+
+See `references/definition-of-done.md` for the full `run:` guide.
 
 Always include this final DoD item:
 
@@ -266,12 +277,13 @@ The epic `doc.md` is read at the start of any task within the epic (see `working
 The skill assumes these hold. The LLM should preserve them when editing:
 
 1. Filename equals `id` field (`TASK-042.md` ↔ `id: TASK-042`).
-2. `milestone` field equals the grandparent folder name.
-3. `epic` field equals the parent folder name.
-4. `status: done` ⇒ all Actions items are `[x]` AND all Definition of Done items are `[x]`.
-5. Any ID in `blocked_by` refers to a task that exists somewhere in `.tasks/`.
-6. Any ID in `verifies` (for `integration-verify` tasks) refers to a task that exists.
-7. `branch` is non-empty when `status` is `in_progress`, `blocked`, or `done`.
-8. Every milestone folder contains a `PRD.md`.
-9. Every epic folder contains a `doc.md`.
-10. Tasks of `type: feature` and `type: integration-verify` must have a non-empty `## Definition of Done` section (≥ 1 item).
+2. For a task inside an epic: `milestone` equals the grandparent folder, `epic` equals the parent folder. For a task directly under a milestone: `milestone` equals the parent folder and `epic` is empty.
+3. `status: done` ⇒ all Actions items are `[x]` AND all Definition of Done items are `[x]`.
+4. Any ID in `blocked_by` refers to a task that exists somewhere in `.tasks/`.
+5. Any ID in `verifies` (for `integration-verify` tasks) refers to a task that exists.
+6. `branch` is non-empty when `status` is `in_progress`, `blocked`, or `done`.
+7. Every milestone folder contains a `PRD.md`.
+8. Every epic folder that contains tasks also contains a `doc.md`.
+9. Tasks of `type: feature` and `type: integration-verify` must have a non-empty `## Definition of Done` section (≥ 1 item).
+
+`task.sh validate` checks invariants 1, 2, 4, 5, 7, and 8 mechanically. Run it after planning and before a work batch.

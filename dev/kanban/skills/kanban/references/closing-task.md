@@ -8,6 +8,8 @@ Used when work on a task is finished and it should be marked `done`. The closing
 
 **A task cannot transition to `status: done` until every Actions checkbox AND every Definition of Done checkbox is `[x]`.** This is non-negotiable. No exceptions for "I'll fix it in the next task" or "the DoD was wrong anyway."
 
+**Second hard rule: the close audit must be run by a *different* agent/model than the one that did the work.** An agent marking its own homework is the core trust gap of an autonomous board (see SKILL.md). The author runs `task.sh check` and prepares the close, but flipping `status: done` requires a separate reviewer to run the audit below and confirm. See "The separate-reviewer requirement" below for how this works in practice.
+
 If you find yourself wanting to close with unchecked items, you have three options and only three:
 
 1. **Finish them.** Do the remaining work.
@@ -17,17 +19,36 @@ If you find yourself wanting to close with unchecked items, you have three optio
 ## Checklist
 
 ```
-- [ ] Run `task.sh check <path-to-task.md>` — must exit 0 (no problems reported)
-- [ ] Every Actions checkbox is [x] (no [ ] or [!])
-- [ ] Every Definition of Done checkbox is [x] (no [ ] or [!])
-- [ ] All code is committed on the task branch
-- [ ] Re-verify each DoD item HONESTLY: re-run the test, re-grep the code, re-check the scenario
-- [ ] Add a final Discussion entry summarizing what shipped
-- [ ] Update status from in_progress to done
+- [ ] (author) Run `task.sh check <path-to-task.md>` — must exit 0 (boxes + run: commands pass)
+- [ ] (author) All code is committed on the task branch
+- [ ] (author) Add a Discussion entry: "ready for review" + how to verify each DoD item
+- [ ] (reviewer — a DIFFERENT agent/model) Re-run `task.sh check`
+- [ ] (reviewer) Every Actions checkbox is [x] (no [ ] or [!])
+- [ ] (reviewer) Every Definition of Done checkbox is [x] (no [ ] or [!])
+- [ ] (reviewer) Re-verify each DoD item HONESTLY: re-run the test, re-grep the code, re-check the scenario
+- [ ] (reviewer) Add the closing Discussion entry confirming the audit
+- [ ] (reviewer) Update status from in_progress to done
 - [ ] Tell the user the task is closed, with the branch name and a one-line summary
 ```
 
 `task.sh check` is the mechanical safety net: it counts checkboxes and refuses to pass if anything is still `[ ]` or `[!]`. **Run it first.** If it exits non-zero, you don't need to do the rest of the audit — the task isn't closeable yet.
+
+## The separate-reviewer requirement
+
+The agent that wrote the code is the worst-placed to judge whether it's done — it shares every blind spot and every optimistic assumption that produced the code. So closing is split into two roles:
+
+- **Author** — does the work, keeps checkboxes honest, runs `task.sh check` until it's green, commits, and then *hands off*. The author does **not** flip `status: done`. Instead it leaves a Discussion entry saying "ready for review" and listing how each DoD item can be verified.
+- **Reviewer** — a *different* agent or model — runs the pre-close audit below from scratch: re-runs `task.sh check`, re-verifies each DoD item independently, audits the integration, and only then flips `status: done` and writes the closing Discussion entry.
+
+How to satisfy "different agent/model" in practice, strongest first:
+
+1. **A separate review pass with a stronger model** (e.g. author = Haiku/Flash, reviewer = Sonnet/Opus). This is the recommended setup for autonomous runs — it also catches the subtle "marked `[x]` but doesn't actually verify" failures that `task.sh check` can't see. See the SKILL.md "Use a different model for reviewing" prompt.
+2. **A fresh agent instance / new session** acting as reviewer, even on the same model — a clean context re-derives the verification instead of trusting working memory.
+3. **The human user** as reviewer, when no second agent is available.
+
+If you are a single agent with no reviewer available and the user hasn't taken that role, do not silently self-close. Run `task.sh check`, prepare everything, and **tell the user the task is ready for review and needs a second pass before it can close**. A board where agents mark their own homework is exactly the failure this requirement prevents.
+
+`run:`-backed DoD items (see `definition-of-done.md`) are the author's best friend here: the more of the DoD that `task.sh check` executes automatically, the less the reviewer has to take on trust.
 
 ## Pre-close audit (the critical part)
 

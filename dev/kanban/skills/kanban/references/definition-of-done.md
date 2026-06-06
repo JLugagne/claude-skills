@@ -101,6 +101,29 @@ Every feature/integration-verify task ends with:
 
 This is the safety net. Even if every other DoD passes, an unchecked Action means scope was abandoned silently.
 
+## Executable DoD: the `run:` suffix
+
+The strongest DoD item isn't just *checkable* — it's *checked automatically*. Append `| run: <command>` to any mechanically verifiable item and `task.sh check` will execute the command at close time, refusing to close on a non-zero exit.
+
+```markdown
+- [ ] Test `TestRefresh` passes | run: go test ./internal/auth -run TestRefresh
+- [ ] `RefreshHandler.Refresh` is wired | run: grep -rq "RefreshHandler.Refresh" internal/
+- [ ] `go vet` is clean | run: go vet ./...
+- [ ] Build succeeds | run: go build ./...
+```
+
+This is what turns "honest closing" from a discipline the LLM has to remember into a guarantee the script enforces. An agent that marks the box `[x]` but didn't actually make the test pass gets caught: `check` re-runs the command and fails.
+
+Rules of thumb:
+
+- The text before `| run:` is still the human-readable claim; the command after it is the proof. Keep both.
+- `grep -q` (quiet, exit-status-only) is the right tool for "X is called from Y" — it exits 0 on a match, non-zero otherwise. Use `grep -rq` to recurse.
+- For "exactly N call sites", a bare grep won't express the count — use `[ "$(grep -rc ... | ...)" = N ]` or just keep it as a manual item and re-verify at close.
+- Commands run from the repo root. Don't `cd` inside them unless you mean it.
+- Not every DoD item can be a one-liner (a multi-step end-to-end scenario, a manual UI check). Those stay manual — the closing audit re-verifies them by hand. Mix freely.
+
+Prefer `run:` for: test invocations, builds, linters, vet, grep-based wiring checks, migration presence checks (`psql -c`, `ls migrations/...`). These are exactly the items an autonomous agent is most tempted to fake.
+
 ## Bad DoD patterns
 
 These look like DoD but aren't checkable. **Do not use them.**

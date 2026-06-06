@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # task.sh — minimal kanban CLI for vibe coding
 # Usage:
-#   task.sh status
+#   task.sh status [--json]
 #   task.sh dump <milestone>
+#   task.sh check <task-path>
+#   task.sh new <milestone> <epic> "<title>" [--type T]
+#   task.sh validate [milestone]
 
 set -euo pipefail
 
@@ -26,7 +29,8 @@ CMD="${1:-}"
 
 case "$CMD" in
     status)
-        exec "$SCRIPT_DIR/status.sh"
+        shift || true
+        exec "$SCRIPT_DIR/status.sh" "$@"
         ;;
     dump)
         if [ -z "${2:-}" ]; then
@@ -46,14 +50,26 @@ case "$CMD" in
         fi
         exec "$SCRIPT_DIR/check.sh" "$2"
         ;;
+    new)
+        shift || true
+        exec "$SCRIPT_DIR/new.sh" "$@"
+        ;;
+    validate)
+        shift || true
+        exec "$SCRIPT_DIR/validate.sh" "$@"
+        ;;
     ""|help|--help|-h)
         cat <<EOF
 task.sh — minimal kanban CLI
 
 Usage:
-  task.sh status              Overview of all milestones
-  task.sh dump <milestone>    JSON dump of all tasks in a milestone
-  task.sh check <task-path>   Verify a task is safe to close (all Actions+DoD [x])
+  task.sh status [--json]          Overview of all milestones (text, or JSON with --json)
+  task.sh dump <milestone>         JSON dump of all tasks in a milestone
+  task.sh check <task-path>        Verify a task is safe to close (all Actions+DoD [x],
+                                   plus any 'run:' verification commands pass)
+  task.sh new <ms> <epic> "<t>"    Scaffold a new task file (use "-" for epic = no epic)
+                                   [--type T] [--priority P] [--status S]
+  task.sh validate [milestone]     Structural integrity check (ids, folders, references)
 
 See the kanban skill's references/scripts.md for details.
 EOF

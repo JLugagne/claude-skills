@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
-# check.sh — verify a task can be safely closed (all Actions [x], all DoD [x])
+# check.sh — verify a task can be safely closed.
+#   1. every Actions item is [x]
+#   2. every DoD item is [x]
+#   3. feature/integration-verify/bugfix tasks have at least 1 DoD item
+#   4. every `| run: <command>` attached to an [x] item exits 0
 # Usage: check.sh <path-to-task.md>
-# Exit 0 = task is closeable; exit 1 = task has unchecked items; exit 2 = error
+# Exit 0 = task is closeable; exit 1 = task has unchecked items or failing
+# verification commands; exit 2 = error.
 set -euo pipefail
 
 FILE="${1:-}"
@@ -54,6 +59,22 @@ count_section() {
     ' "$file"
 }
 
+# Extract the command after `| run:` from every [x] item in the Actions and
+# Definition of Done sections. One command per output line.
+extract_run_commands() {
+    awk '
+        $0 == "## Actions" || $0 == "## Definition of Done" { in_section=1; next }
+        /^## / && in_section { in_section=0 }
+        in_section && /^- \[x\].*\| run:/ {
+            idx = index($0, "| run:")
+            cmd = substr($0, idx + 6)
+            sub(/^[[:space:]]+/, "", cmd)
+            sub(/[[:space:]]+$/, "", cmd)
+            if (length(cmd) > 0) print cmd
+        }
+    ' "$1"
+}
+
 ID=$(get_field "$FILE" "id")
 TITLE=$(get_field "$FILE" "title")
 STATUS=$(get_field "$FILE" "status")
@@ -75,7 +96,7 @@ dod_total=$((dod_done + dod_open + dod_blocked))
 
 problems=()
 
-# Rule 1: feature and integration-verify tasks must have DoD items
+# Rule 1: feature, integration-verify and bugfix tasks must have DoD items
 if [ "$TYPE" = "feature" ] || [ "$TYPE" = "integration-verify" ] || [ "$TYPE" = "bugfix" ]; then
     if [ "$dod_total" -eq 0 ]; then
         problems+=("Missing Definition of Done: $TYPE tasks must have at least 1 DoD item")
@@ -98,12 +119,50 @@ if [ "$dod_blocked" -gt 0 ]; then
     problems+=("Blocked DoD: $dod_blocked items marked [!]")
 fi
 
+# Rule 4: execute `| run:` verification commands attached to [x] items.
+run_cmds=()
+run_results=()
+run_outputs=()
+while IFS= read -r cmd; do
+    [ -z "$cmd" ] && continue
+    if out=$(bash -c "$cmd" 2>&1); then
+        run_results+=("PASS")
+    else
+        run_results+=("FAIL")
+    fi
+    run_cmds+=("$cmd")
+    run_outputs+=("$out")
+done < <(extract_run_commands "$FILE")
+
+run_failed=0
+if [ ${#run_results[@]} -gt 0 ]; then
+    for r in "${run_results[@]}"; do
+        [ "$r" = "FAIL" ] && run_failed=$((run_failed + 1))
+    done
+fi
+if [ "$run_failed" -gt 0 ]; then
+    problems+=("DoD verification failed: $run_failed run: command(s) exited non-zero")
+fi
+
 # Output
 echo "Task:   $ID - $TITLE"
 echo "Type:   $TYPE"
 echo "Status: $STATUS"
 echo "Actions: $actions_done/$actions_total done ($actions_open open, $actions_blocked blocked)"
 echo "DoD:     $dod_done/$dod_total done ($dod_open open, $dod_blocked blocked)"
+
+if [ ${#run_cmds[@]} -gt 0 ]; then
+    echo "Verification (run: commands on [x] items):"
+    i=0
+    while [ "$i" -lt ${#run_cmds[@]} ]; do
+        echo "  [${run_results[$i]}] ${run_cmds[$i]}"
+        if [ "${run_results[$i]}" = "FAIL" ]; then
+            # Show up to 10 lines of output, indented, to aid debugging.
+            printf '%s\n' "${run_outputs[$i]}" | head -n 10 | sed 's/^/        /'
+        fi
+        i=$((i + 1))
+    done
+fi
 echo
 
 if [ ${#problems[@]} -eq 0 ]; then

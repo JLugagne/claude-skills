@@ -122,17 +122,44 @@ Task types: `feature` (default), `integration-verify`, `chore`, `bugfix`. Integr
 
 ### Scripts
 
-Three commands in `scripts/task.sh`:
+Five commands via `scripts/task.sh`:
 
 ```bash
-./scripts/task.sh status               # overview of all milestones
-./scripts/task.sh dump <milestone>     # JSON of tasks in a milestone
-./scripts/task.sh check <task-path>    # verify a task is safe to close
+./scripts/task.sh status [--json]          # overview of all milestones (text or JSON)
+./scripts/task.sh dump <milestone>         # JSON of tasks in a milestone
+./scripts/task.sh check <task-path>        # verify a task is safe to close
+./scripts/task.sh new <ms> <epic> "<t>"    # scaffold a task file + allocate its ID
+./scripts/task.sh validate [milestone]     # structural integrity check
 ```
 
-`check` exits non-zero if any Actions or DoD item is still `[ ]` or `[!]`. Use it before flipping `status: done`, and as a pre-merge check in CI.
+`check` exits non-zero if any Actions or DoD item is still `[ ]` or `[!]`, **and it executes any `| run: <command>` attached to a `[x]` item, failing on a non-zero exit** — so "test passes" can be machine-verified, not just claimed. Use it before flipping `status: done`, and as a pre-merge check in CI.
+
+`new` allocates the next ID from `.next-id`, writes valid front matter + empty sections, and bumps `.next-id`. Use `-` for the epic to drop a standalone chore directly under the milestone (no epic). `validate` catches id/folder/reference mistakes across the board.
+
+The scripts ship executable; if your clone strips that, run `chmod +x scripts/*.sh`.
 
 To read a specific task, `cat .tasks/M1-auth/oauth/TASK-042.md` — no dedicated command. To update a field, edit the YAML block directly.
+
+#### Executable DoD example
+
+```markdown
+## Definition of Done
+- [ ] Test `TestRefresh` passes | run: go test ./internal/auth -run TestRefresh
+- [ ] Handler is wired           | run: grep -rq "RefreshHandler.Refresh" internal/
+- [ ] `go vet` is clean          | run: go vet ./...
+```
+
+At close time `task.sh check` runs each command and refuses to close if any fails.
+
+#### Reducing permission prompts
+
+When an agent drives the scripts, allowlist them once in `.claude/settings.json`:
+
+```json
+{ "permissions": { "allow": ["Bash(./.claude/skills/kanban/scripts/task.sh:*)"] } }
+```
+
+`check`'s `run:` commands execute as subprocesses of that approved call, so only allowlist in repos where you trust the task files.
 
 ## Usage guide
 
@@ -497,9 +524,11 @@ kanban/
 │   └── ending-session.md               # session pause without losing context
 └── scripts/
     ├── task.sh                         # dispatcher
-    ├── status.sh                       # overview implementation
+    ├── status.sh                       # overview implementation (text / --json)
     ├── dump.sh                         # JSON dump implementation
-    └── check.sh                        # closeability check
+    ├── check.sh                        # closeability check (boxes + run: execution)
+    ├── new.sh                          # task scaffolder + ID allocation
+    └── validate.sh                     # structural integrity check
 ```
 
 The SKILL.md is short and just routes to the right reference. References are loaded only when relevant — progressive disclosure keeps context lean.
@@ -551,7 +580,9 @@ A few deliberate choices, in case you want to fork or extend:
 - **No `show` or `sync` commands.** `cat` reads a task; direct file editing updates fields. Less surface area, fewer ways to misuse.
 - **Global task IDs, not per-milestone.** A file can be moved between epics or milestones without renumbering.
 - **Append-only Discussion.** History is the value. Reversed decisions get new dated entries, not edits.
-- **`task.sh check` is purely mechanical.** It doesn't verify whether DoD items are *true* — it verifies they're all `[x]`. The honest re-verification of each DoD item is the LLM's job during the closing-task audit. The script catches the simple failure (forgot to update); the LLM catches the subtle one (marked `[x]` but didn't actually verify).
+- **`task.sh check` counts boxes *and* runs `run:` commands.** It verifies every Actions/DoD item is `[x]`, and executes any `| run: <command>` attached to a `[x]` item, failing on a non-zero exit. The script now catches both the simple failure (forgot to update a box) and a large class of the subtle one (claimed a test passes when it doesn't). DoD items that can't be a one-liner stay manual, and the closing reviewer re-verifies those by hand.
+- **An agent never closes its own task.** Closing is split into author and reviewer roles, and the reviewer must be a *different* agent/model (or the user). This is the deliberate answer to "self-closing subagents mark their own homework." Pair it with `run:`-backed DoD so most of the audit is machine-checked rather than trusted.
+- **Standalone chores can skip the epic.** One-off `chore`/`bugfix` work can live directly under a milestone (`task.sh new M1-x - "..."`), so a 2-line fix isn't buried under PRD/epic/DoD ceremony. Feature work still belongs in an epic so the integration-verify gate covers it.
 
 ## Migration from v1
 

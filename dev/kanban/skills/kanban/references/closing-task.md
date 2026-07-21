@@ -1,6 +1,8 @@
 # Closing a task
 
-Used when work on a task is finished and it should be marked `done`. The closing process is the **last safety net** against marking a task done prematurely — it explicitly re-verifies every Action and every DoD item.
+Used when work on a task is finished and it should be marked `done`. The closing process is the **last safety net** against marking a task done prematurely.
+
+**The reviewer's mindset is adversarial: refute-first.** The reviewer's job is *not* to confirm the task is done — it is to try, actively and in good faith, to **prove it is *not* done**. Assume the work is incomplete until you have genuinely tried and failed to break it. Hunt for the missing file, the feature that was scoped but never built, the code that exists but is never called, the test that passes without actually exercising the feature, the error path nobody handled. A reviewer that sets out to confirm "done" will always find a way to confirm it; a reviewer that sets out to disprove "done" is the only one that catches premature closure. You concede `done` only when your attempts to disprove it have failed.
 
 **Prerequisites:** read `references/structure.md` and `references/definition-of-done.md`.
 
@@ -23,11 +25,15 @@ If you find yourself wanting to close with unchecked items, you have three optio
 - [ ] (author) All code is committed on the task branch
 - [ ] (author) Add a Discussion entry: "ready for review" + how to verify each DoD item
 - [ ] (reviewer — a DIFFERENT agent/model) Re-run `task.sh check`
+- [ ] (reviewer) Try to prove work is MISSING: enumerate files/features/wiring the task implies and look for each — see "Try to prove it's not done" below
+- [ ] (reviewer) Run the target language's linters / static analysis, even if the DoD didn't ask for it (see "Run the linters")
+- [ ] (reviewer) Write red-tests that attack the gaps — a test that SHOULD pass if the task is done; try to make it fail (see "Write red-tests")
+- [ ] (reviewer) Nitpick the diff — useless/lying comments, incomprehensible code, architecture smells; be the picky reviewer nobody wants (see "Nitpick code quality")
 - [ ] (reviewer) Every Actions checkbox is [x] (no [ ] or [!])
 - [ ] (reviewer) Every Definition of Done checkbox is [x] (no [ ] or [!])
-- [ ] (reviewer) Re-verify each DoD item HONESTLY: re-run the test, re-grep the code, re-check the scenario
-- [ ] (reviewer) Add the closing Discussion entry confirming the audit
-- [ ] (reviewer) Update status from in_progress to done
+- [ ] (reviewer) Attack each DoD item: don't re-confirm it, try to break it — re-run the test, re-grep the code, re-run the scenario with adversarial input
+- [ ] (reviewer) Add the closing Discussion entry confirming the audit AND what you tried to break
+- [ ] (reviewer) Update status from in_progress to done (ONLY if every attempt to disprove failed)
 - [ ] Tell the user the task is closed, with the branch name and a one-line summary
 ```
 
@@ -38,7 +44,7 @@ If you find yourself wanting to close with unchecked items, you have three optio
 The agent that wrote the code is the worst-placed to judge whether it's done — it shares every blind spot and every optimistic assumption that produced the code. So closing is split into two roles:
 
 - **Author** — does the work, keeps checkboxes honest, runs `task.sh check` until it's green, commits, and then *hands off*. The author does **not** flip `status: done`. Instead it leaves a Discussion entry saying "ready for review" and listing how each DoD item can be verified.
-- **Reviewer** — a *different* agent or model — runs the pre-close audit below from scratch: re-runs `task.sh check`, re-verifies each DoD item independently, audits the integration, and only then flips `status: done` and writes the closing Discussion entry.
+- **Reviewer** — a *different* agent or model — runs the pre-close audit below from scratch with an adversarial goal: **disprove "done"**. It tries to prove work is missing, runs the language's linters, writes red-tests to attack the gaps, and attacks each DoD claim rather than re-confirming it. It flips `status: done` and writes the closing Discussion entry **only when every attempt to disprove completeness has failed**.
 
 How to satisfy "different agent/model" in practice, strongest first:
 
@@ -52,46 +58,95 @@ If you are a single agent with no reviewer available and the user hasn't taken t
 
 ## Pre-close audit (the critical part)
 
-Before flipping `status: done`, go through the audit. Do not skip it even if you're confident.
+Before flipping `status: done`, go through the audit. Do not skip it even if you're confident. Run it as an attempt to **disprove** completeness, not to confirm it. Every step below is phrased as an attack — the task only closes if the attack fails.
 
-### Step 1: Audit the Actions section
+### Step 1: Try to prove work is MISSING
+
+Start here, before touching the checkboxes. Read the task title, description, DoD, and the epic/PRD it feeds, then enumerate everything the task *implies* should now exist and go hunting for the gap:
+
+- **Missing files.** Does every file the task should have created/modified actually exist? A handler with no route file, a model with no migration, a feature with no test file — list what's expected and `ls`/grep for each.
+- **Missing features.** Break the task's scope into the smallest observable behaviors. For each, find the concrete code path that implements it. If you can't point at the code, the feature is missing — regardless of what the checkbox says.
+- **Missing wiring.** New code that nothing calls is dead code (also Step 4). Search for callers of every new public symbol.
+- **Missing edge/error cases.** What happens on empty input, nil, timeout, duplicate, permission denied, upstream 5xx? If the task is user-facing or stateful and none of these are handled, the task is not done.
+
+Write down what you looked for and whether you found it — this goes in the closing Discussion entry. If you find a genuine gap, **the task cannot close**: change the relevant box back to `[ ]`, and either fix it or open a follow-up (Discussion entry + remove the item).
+
+### Step 2: Run the linters and static analysis
+
+Detect the target language(s) of the changed code and run its standard tooling **even if the DoD didn't ask for it**. The DoD's `| run:` commands are the floor, not the ceiling. Examples (use what fits the project — check the repo's config/CI for the canonical set, prefer current tools over deprecated ones):
+
+| Language        | Run (non-exhaustive)                                                   |
+| --------------- | ---------------------------------------------------------------------- |
+| Go              | `go vet ./...`, `golangci-lint run`, `go build ./...`, `gofmt -l .`    |
+| TypeScript / JS | `tsc --noEmit`, `eslint .`, `prettier --check .`                       |
+| Python          | `ruff check .`, `mypy .`, `pytest -q`                                  |
+| Rust            | `cargo clippy -- -D warnings`, `cargo fmt --check`, `cargo test`       |
+
+Any new lint/type error, warning, or format drift introduced by this task is a defect. It does not have to fail `task.sh check` to block the close — the reviewer applies judgment: pre-existing warnings unrelated to the task are noted, not blocking; anything the task introduced is blocking until fixed or explicitly deferred with a Discussion entry.
+
+### Step 3: Write red-tests to attack the gaps
+
+Don't only re-run the author's tests — the author wrote those to pass. Add **red-tests**: tests you *expect the feature to satisfy if it is truly done*, written specifically to expose the gaps you suspect from Step 1. The goal is to make them fail.
+
+- Write a test for the edge/error case the author likely skipped. If it fails, you found real missing work.
+- Write a test that asserts the observable end-to-end behavior from the outside (not the internals the author already covered). If the feature isn't wired, it fails.
+- **The removal test:** if you delete or no-op the code the task added, does the author's test suite still pass? If yes, their tests don't actually exercise the feature — the "test passes" DoD is functionally meaningless. Reinstate the code and note the weak coverage.
+
+A red-test that *fails* is a finding: the task is not done — reopen it (or file a bugfix/follow-up). A red-test that *passes* after honest effort to break the feature is evidence the task really is complete — keep it, it strengthens the suite. Either way, the red-tests you wrote go into the branch and are mentioned in the closing Discussion entry.
+
+### Step 4: Attack the Actions section
 
 For each Actions item:
 
 - Is it `[x]`? If `[ ]` or `[!]`, **the task cannot close**.
-- Is the `[x]` honest? Did you actually do this, or did you mark it as you went and now you're not sure?
-- If you have any doubt, re-check by running the code or reading the file.
+- Is the `[x]` honest? Did the author actually do this, or mark it optimistically as they went? Assume the latter until you've re-checked.
+- Re-check by running the code or reading the file — don't take the box on trust.
 
 If you find any item that was incorrectly marked, change it back. Then either finish it, drop it (Discussion entry + remove), or move it to follow-up.
 
-### Step 2: Audit the Definition of Done — the most important step
+### Step 5: Attack the Definition of Done — the most important step
 
-For each DoD item:
+For each DoD item, try to break the claim rather than confirm it. Don't trust the checkbox state from earlier:
 
 - Is it `[x]`? If `[ ]` or `[!]`, **the task cannot close**.
-- **Re-verify the item right now.** Don't trust the checkbox state from earlier. Specifically:
-  - **"Test X passes"** → re-run the test. Show the user the result if non-obvious. Do not trust memory.
-  - **"Function X is called from Y"** → re-grep. If grep returns zero matches, the DoD is false.
-  - **"End-to-end scenario"** → trace through the code or re-run the scenario manually. Don't assume.
-  - **"Migration applied"** → check the DB or migration history. Don't assume.
-  - **"No regression"** → re-run the full test suite.
+- **"Test X passes"** → re-run the test yourself. Then ask whether it would still pass if the feature were broken (Step 3's removal test). Do not trust memory.
+- **"Function X is called from Y"** → re-grep. If grep returns zero matches, the DoD is false.
+- **"End-to-end scenario"** → re-run it with adversarial input, not the happy path the author used. Don't assume.
+- **"Migration applied"** → check the DB or migration history. Don't assume.
+- **"No regression"** → re-run the full test suite.
 
 If any DoD item turns out to actually not pass: change it back to `[ ]` and **do not close the task**. Either fix the underlying issue, or open a follow-up task and remove this DoD item with a Discussion entry explaining the discovery.
 
-### Step 3: Audit the integration
+### Step 6: Attack the integration
 
-This is the audit that catches the most subtle failures. Ask:
+This is the audit that catches the most subtle failures. Ask, adversarially:
 
-- **Is the code I wrote actually wired into the application?** Search for callers. If new functions exist but nothing calls them, the task is not done — the code is dead.
-- **Does the task's claimed contribution to the PRD actually exist?** Re-read the relevant Success criterion or Integration contract scenario. Can you trace it through real code paths from input to output?
-- **If I removed the test I just added, would the feature still appear to work?** If yes, the test isn't actually testing the feature — it's testing something tangential. The DoD claim "test passes" might be technically true but functionally meaningless.
+- **Is the code actually wired into the application?** Search for callers. If new functions exist but nothing calls them, the task is not done — the code is dead.
+- **Does the task's claimed contribution to the PRD actually exist?** Re-read the relevant Success criterion or Integration contract scenario. Can you trace it through real code paths from input to output? If you can't, assume it doesn't.
+- **If I removed the test the author added, would the feature still appear to work?** If yes, the test isn't testing the feature — it's testing something tangential. "Test passes" might be technically true but functionally meaningless.
 
-### Step 4: Audit the title and description
+### Step 7: Nitpick code quality — be the reviewer nobody wants
+
+This is where the reviewer is deliberately, professionally *insufferable*. A task can be functionally complete and still be a mess. Go through every line the task changed (the diff, not the whole repo) and pick at it. Assume something is wrong on every line until it proves itself clean. Be the picky reviewer everyone dreads — the point is to catch what a polite reviewer waves through.
+
+- **Useless / lying comments.** Flag comments that restate the code (`i++ // increment i`), comments that describe what the code *used* to do, commented-out dead code, TODO/FIXME/XXX left behind, and comments that no longer match the code they sit above (a comment that lies is worse than none). If this project's conventions forbid comments on code, *any* such comment is a defect.
+- **Incomprehensible code.** Single-letter names outside tight loops, functions that don't say what they do, deeply nested conditionals, a 200-line function that should be five, clever one-liners that take a minute to read, magic numbers with no name. If you have to read a block twice to understand it, that's a finding — write it down.
+- **Architecture / design smells.** Layering violations (a handler reaching into the DB directly, business logic in a transport adapter), duplicated logic that should be shared, a new abstraction that has exactly one caller, tight coupling to a concrete type where an interface was the pattern everywhere else, global mutable state, error handling that swallows or logs-and-continues, inconsistency with the patterns the surrounding code already established.
+- **Dead ends & sloppiness.** Unused variables/imports/params, copy-paste with a stale name, inconsistent formatting the linter didn't catch, misleading names (`getUser` that also mutates), missing error wrapping/context, resources never closed.
+
+Every nit gets recorded. For each, decide its weight:
+
+- **Blocking** — anything that will bite maintenance or hides a bug (misleading name, swallowed error, layering violation, incomprehensible core logic). The task does **not** close until it's fixed or explicitly deferred with a Discussion entry and a follow-up task.
+- **Non-blocking nit** — pure style/taste that the linter didn't own. Note it in the Discussion entry so it's on record; don't hold the close hostage to it, but don't stay silent either.
+
+The reviewer's reputation here is a feature, not a bug: a task that survives a genuinely picky pass is one the next session can trust.
+
+### Step 8: Audit the title and description
 
 - Does the title still accurately describe what was shipped? If the work drifted, either rewrite the title (with a Discussion entry explaining the drift), or acknowledge that the original task isn't what got built and open a more honest replacement.
 - Does the description still match? Same question.
 
-### Step 5: Audit the Discussion
+### Step 9: Audit the Discussion
 
 - Glance through the Discussion entries. Would a future session understand the decisions?
 - If a non-trivial choice was made during this task but never logged, log it now (with today's date) — better late than never.
@@ -105,6 +160,8 @@ After the audit passes, add a final entry that wraps up the task. Format:
 ### YYYY-MM-DD — Task closed
 Shipped: brief summary of what now exists in the codebase as a result.
 DoD verified: confirm that each DoD item was re-checked just now (and how).
+Tried to break it: what the adversarial pass attacked — gaps hunted, linters run,
+  red-tests written, nits found — and why each attack failed (or what it forced you to fix).
 Branch: task/TASK-NNN-<slug>
 Follow-ups: any tasks created as a result of this work (with IDs), or "none".
 ```
@@ -121,11 +178,19 @@ DoD verified:
   - grep "RefreshHandler.Refresh" in internal/ → 2 matches in auth/middleware.go
   - migration 004_refresh_tokens applied (verified via \d refresh_tokens)
   - All previously-passing tests still pass (go test ./... exit 0)
+Tried to break it:
+  - Hunted for a missing revoke path — found none; rotation covers it.
+  - golangci-lint run: clean; go vet: clean.
+  - Red-test TestConcurrentRefreshRacesToOne: written to force a double-rotation,
+    failed to break it (exactly one succeeds). Kept in the suite.
+  - Removal test: no-op'd Refresh() → TestRefreshHappyPath fails as expected, so
+    the test really exercises the feature.
+  - Nit: comment "// refresh the token" above Refresh() was noise → removed.
 Branch: task/TASK-042-refresh-rotation
 Follow-ups: TASK-051 (token cleanup cron), TASK-052 (admin UI to revoke sessions).
 ```
 
-The "DoD verified" lines are the critical addition — they prove the audit happened, not just claimed.
+The "DoD verified" and "Tried to break it" lines are the critical addition — they prove the audit happened adversarially, not just claimed.
 
 This closing entry is what a future session reads first when looking back at the task. Make it useful.
 

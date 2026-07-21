@@ -107,7 +107,7 @@ A handful of invariants apply across every workflow. Internalize these even when
 
 9. **Make DoD items executable whenever possible.** Append `| run: <command>` to a DoD item and `task.sh check` runs it, refusing to close on a non-zero exit. This turns honest closing from a discipline into a machine-enforced guarantee — use it for tests, builds, vet/lint, and grep-based wiring checks. See `references/definition-of-done.md`.
 
-10. **An agent never closes its own task.** The author prepares the close (boxes honest, `task.sh check` green, committed) but a *different* agent/model — or, failing that, the user — runs the close audit and flips `status: done`. Self-marked homework is the board's core trust gap. If no reviewer is available, tell the user the task is ready for review rather than self-closing. See `references/closing-task.md`.
+10. **An agent never closes its own task, and the reviewer is adversarial.** The author prepares the close (boxes honest, `task.sh check` green, committed) but a *different* agent/model — or, failing that, the user — runs the close audit and flips `status: done`. Self-marked homework is the board's core trust gap. The reviewer's mindset is **refute-first**: its job is not to confirm the task is done but to try to *prove it is not* — hunt for missing files/features/wiring, run the target language's linters, write red-tests to attack the gaps, and nitpick the diff hard (useless comments, incomprehensible code, architecture smells). It closes only when every attempt to disprove completeness has failed. If no reviewer is available, tell the user the task is ready for review rather than self-closing. See `references/closing-task.md`.
 
 ## Communication style
 

@@ -49,6 +49,7 @@ priority: normal
 type: feature
 blocked_by: []
 branch: ""
+review_rejections: 0
 ---
 ```
 
@@ -66,13 +67,14 @@ Field reference:
 | `type`        | yes      | One of: `feature`, `integration-verify`, `chore`, `bugfix`. Defaults to `feature` if absent. |
 | `blocked_by`  | yes      | List of task IDs that must be `done` before this can start. `[]` if none.|
 | `branch`      | yes      | Git branch name when in progress. `""` until task is started.            |
+| `review_rejections` | no | Integer, default `0`. How many times the reviewer refuted this task during closing. Bumped by `task.sh reject`; drives the rework-loop guard (see `closing-task.md`). Absent is treated as `0`. |
 
 Status semantics:
 
 - `backlog` — defined but not ready to work on (future milestone, or unrefined)
 - `todo` — ready to start, all blockers resolved
 - `in_progress` — actively being worked on (branch should exist)
-- `blocked` — was in progress, now waiting on external dep
+- `blocked` — was in progress, now waiting on external dep, or the review rework-loop guard tripped (rejected more than twice — see `closing-task.md`)
 - `done` — every Action AND every DoD checkbox is `[x]`, code shipped
 - `cancelled` — abandoned, kept for history
 

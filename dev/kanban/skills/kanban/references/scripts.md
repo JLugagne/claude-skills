@@ -1,12 +1,13 @@
 # Scripts
 
-Five commands, positional arguments plus a couple of flags. Designed so the LLM can't easily mis-invoke them.
+Six commands, positional arguments plus a couple of flags. Designed so the LLM can't easily mis-invoke them.
 
 | Command                            | Purpose                                                        |
 | ---------------------------------- | ------------------------------------------------------------- |
 | `task.sh status [--json]`          | Overview of all milestones (counts per status).               |
 | `task.sh dump <milestone>`         | JSON of all tasks in a milestone, including DoD progress.     |
 | `task.sh check <task-path>`        | Verify a task is safe to close (boxes + `run:` verification). |
+| `task.sh reject <task-path> [why]` | Record a reviewer rejection, send the task back to rework; STOPS the kanban past 2 rejections. |
 | `task.sh new <ms> <epic> "<t>"`    | Scaffold a valid task file and allocate its ID.               |
 | `task.sh validate [milestone]`     | Structural integrity check (ids, folders, references).        |
 
@@ -168,6 +169,51 @@ Prefer a `run:` command whenever the DoD item is mechanically checkable — it t
 **When to use:**
 - Always before flipping a task to `status: done` (see `closing-task.md`).
 - In CI as a pre-merge check on PRs that touch `.tasks/`.
+
+## `task.sh reject <task-path> ["reason"]`
+
+Called by the **reviewer** when the close audit refutes the task (see `closing-task.md`). It drives the rework loop and enforces the anti-looping guard.
+
+What it does, mechanically:
+
+1. Increments the `review_rejections` counter in the task's front matter (absent = `0`).
+2. Sends the task back to `status: in_progress` so a **fixer agent** can rework it.
+3. **Guard:** once the counter exceeds `MAX_REJECTS` (default 2) — i.e. on the 3rd rejection — it instead sets `status: blocked`, prints a STOP banner, and exits `3`. That exit code is the signal to **halt the kanban and escalate to the user**: the rework loop isn't converging and needs a human decision.
+
+**Usage:**
+```bash
+./scripts/task.sh reject .tasks/M1-auth/oauth/TASK-002.md "swallowed error in Refresh(), missing timeout path"
+```
+
+**Output (rework, exit 0):**
+```
+Task:       TASK-002
+Rejections: 1 (limit 2)
+
+REWORK: rejection #1 recorded. Status set to 'in_progress'.
+A fixer agent must now pick up the code + the reviewer's findings from
+## Discussion, fix them, get 'task.sh check' green, then hand back for
+re-review by a DIFFERENT agent than the fixer.
+Rejection reason: swallowed error in Refresh(), missing timeout path
+```
+
+**Output (guard tripped, exit 3):**
+```
+Task:       TASK-002
+Rejections: 3 (limit 2)
+
+STOP: task rejected 3 times (> 2).
+Status set to 'blocked'. Halting the kanban — the rework loop is not
+converging. Escalate to the user: this needs a human decision, not
+another automated fix attempt.
+```
+
+Notes:
+
+- The script only moves mechanical state (counter + status). The reviewer still writes the *findings* into the task's `## Discussion` — it has the date and the detail, and the fixer reads them there.
+- `review_rejections` accumulates across the whole task life; it is **not** reset by a successful rework, only ever cleared if you edit it by hand. This is deliberate: the guard counts total failed reviews, so a task that limps through can't reset its way around the limit.
+- Override the threshold for a run with `MAX_REJECTS=<n> ./scripts/task.sh reject ...` if a task genuinely warrants more cycles — but prefer escalating to the user, which is what the default enforces.
+- Exit codes: `0` = rework (loop continues), `3` = STOP (guard tripped, escalate), `2` = usage/error.
 
 ## `task.sh new <milestone> <epic> "<title>"`
 

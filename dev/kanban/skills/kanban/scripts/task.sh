@@ -4,6 +4,7 @@
 #   task.sh status [--json]
 #   task.sh dump <milestone>
 #   task.sh check <task-path>
+#   task.sh reject <task-path> ["reason"]
 #   task.sh new <milestone> <epic> "<title>" [--type T]
 #   task.sh validate [milestone]
 
@@ -50,6 +51,15 @@ case "$CMD" in
         fi
         exec "$SCRIPT_DIR/check.sh" "$2"
         ;;
+    reject)
+        if [ -z "${2:-}" ]; then
+            echo "Error: reject requires a task file path" >&2
+            echo "Usage: task.sh reject <path-to-task.md> [\"reason\"]" >&2
+            exit 2
+        fi
+        shift || true
+        exec "$SCRIPT_DIR/reject.sh" "$@"
+        ;;
     new)
         shift || true
         exec "$SCRIPT_DIR/new.sh" "$@"
@@ -67,6 +77,9 @@ Usage:
   task.sh dump <milestone>         JSON dump of all tasks in a milestone
   task.sh check <task-path>        Verify a task is safe to close (all Actions+DoD [x],
                                    plus any 'run:' verification commands pass)
+  task.sh reject <task-path> [why] Reviewer refuted the task: bump the rejection
+                                   counter, send it back to in_progress for rework;
+                                   STOPS the kanban (exit 3) past 2 rejections
   task.sh new <ms> <epic> "<t>"    Scaffold a new task file (use "-" for epic = no epic)
                                    [--type T] [--priority P] [--status S]
   task.sh validate [milestone]     Structural integrity check (ids, folders, references)

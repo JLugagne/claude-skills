@@ -86,6 +86,7 @@ priority: $PRIORITY
 type: $TYPE
 blocked_by: []
 branch: ""
+review_rejections: 0
 ---
 
 ## Actions

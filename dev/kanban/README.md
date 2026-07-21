@@ -122,17 +122,20 @@ Task types: `feature` (default), `integration-verify`, `chore`, `bugfix`. Integr
 
 ### Scripts
 
-Five commands via `scripts/task.sh`:
+Six commands via `scripts/task.sh`:
 
 ```bash
 ./scripts/task.sh status [--json]          # overview of all milestones (text or JSON)
 ./scripts/task.sh dump <milestone>         # JSON of tasks in a milestone
 ./scripts/task.sh check <task-path>        # verify a task is safe to close
+./scripts/task.sh reject <task-path> [why] # reviewer refuted: rework loop + stop guard
 ./scripts/task.sh new <ms> <epic> "<t>"    # scaffold a task file + allocate its ID
 ./scripts/task.sh validate [milestone]     # structural integrity check
 ```
 
 `check` exits non-zero if any Actions or DoD item is still `[ ]` or `[!]`, **and it executes any `| run: <command>` attached to a `[x]` item, failing on a non-zero exit** — so "test passes" can be machine-verified, not just claimed. Use it before flipping `status: done`, and as a pre-merge check in CI.
+
+`reject` is how the adversarial reviewer refutes a task instead of fixing it: it bumps a `review_rejections` counter, sends the task back to `in_progress` for a fixer agent, and — past two rejections (the 3rd) — sets the task to `blocked`, exits `3`, and stops the kanban so a human can decide. See the closing-task protocol.
 
 `new` allocates the next ID from `.next-id`, writes valid front matter + empty sections, and bumps `.next-id`. Use `-` for the epic to drop a standalone chore directly under the milestone (no epic). `validate` catches id/folder/reference mistakes across the board.
 
@@ -360,23 +363,41 @@ form "Test X passes", actually re-run the test now and paste the output.
 Do not rely on memory of an earlier run.
 ```
 
-#### Use a different model for reviewing
+#### Use a different model for reviewing — and make it adversarial
 
-After a batch of autonomous tasks, hand the review to a more capable model:
+After a batch of autonomous tasks, hand the review to a more capable model, and
+tell it to try to **break** the work, not confirm it:
 
 ```
 I've just had Flash run TASK-040 through TASK-045 autonomously.
-You (Sonnet) are now the reviewer. For each task:
-1. Read the task file (Actions, DoD, Discussion).
-2. Open the code that was added/modified.
-3. Run `task.sh check`.
-4. Spot-check 2 DoD items: does the code actually satisfy what the DoD claims?
-5. Report findings as a table: task ID, DoD honesty score (0-3),
-   issues found, recommended action.
+You (Sonnet) are now the reviewer. Your goal is to PROVE each task is NOT
+done, not to confirm it. For each task:
+1. Read the task file (Actions, DoD, Discussion) and the code that changed.
+2. Try to prove work is missing: hunt for absent files, features, wiring,
+   unhandled error/edge cases.
+3. Run `task.sh check`, plus the language's linters (go vet / golangci-lint,
+   eslint / tsc, ruff / mypy, clippy...) even if the DoD didn't ask.
+4. Write a red-test that SHOULD pass if the task is truly done, and try to
+   make it fail. Run the removal test: if I no-op the new code, does the
+   author's suite still pass? If yes, their tests prove nothing.
+5. Nitpick the diff hard: useless/lying comments, incomprehensible code,
+   architecture smells.
+6. If you find ANY defect: run `task.sh reject <path> "why"`, write the
+   findings into Discussion, and hand back to a fixer. Do NOT fix-and-close
+   yourself. Otherwise close the task.
 ```
 
 This catches the subtle "marked `[x]` but doesn't actually verify" failures
 that `task.sh check` (which only counts checkboxes) can't see.
+
+**The rework loop.** A rejection sends the task back to `in_progress`; a fixer
+agent (different from the reviewer) reads the findings, fixes them, gets
+`task.sh check` green, and hands back for a fresh adversarial review. The loop
+repeats until the reviewer validates — capped by a guard: **past two rejections
+the task is set to `blocked`, `task.sh reject` exits `3`, and the kanban stops**
+so you can decide whether to rescope, split, or accept a limitation. Two
+automated rework cycles is the ceiling; a third failure isn't one more patch
+away.
 
 ### When things go wrong
 
@@ -511,7 +532,7 @@ kanban/
 ├── SKILL.md                            # entry point: concept + routing table
 ├── references/
 │   ├── structure.md                    # file format, front matter, checkboxes
-│   ├── scripts.md                      # CLI usage (status, dump, check)
+│   ├── scripts.md                      # CLI usage (status, dump, check, reject)
 │   ├── milestone-planning.md           # how to write a PRD
 │   ├── definition-of-done.md           # how to write verifiable DoD items
 │   ├── creating-feature.md             # full feature decomposition workflow
@@ -520,13 +541,14 @@ kanban/
 │   ├── working-on-task.md              # execution workflow
 │   ├── discussion-protocol.md          # when and how to log decisions
 │   ├── handling-blockers.md            # blocker states and resolution
-│   ├── closing-task.md                 # marking a task done (audit + check)
+│   ├── closing-task.md                 # adversarial close audit + rework loop
 │   └── ending-session.md               # session pause without losing context
 └── scripts/
     ├── task.sh                         # dispatcher
     ├── status.sh                       # overview implementation (text / --json)
     ├── dump.sh                         # JSON dump implementation
     ├── check.sh                        # closeability check (boxes + run: execution)
+    ├── reject.sh                       # reviewer rejection: rework loop + stop guard
     ├── new.sh                          # task scaffolder + ID allocation
     └── validate.sh                     # structural integrity check
 ```
@@ -581,7 +603,8 @@ A few deliberate choices, in case you want to fork or extend:
 - **Global task IDs, not per-milestone.** A file can be moved between epics or milestones without renumbering.
 - **Append-only Discussion.** History is the value. Reversed decisions get new dated entries, not edits.
 - **`task.sh check` counts boxes *and* runs `run:` commands.** It verifies every Actions/DoD item is `[x]`, and executes any `| run: <command>` attached to a `[x]` item, failing on a non-zero exit. The script now catches both the simple failure (forgot to update a box) and a large class of the subtle one (claimed a test passes when it doesn't). DoD items that can't be a one-liner stay manual, and the closing reviewer re-verifies those by hand.
-- **An agent never closes its own task.** Closing is split into author and reviewer roles, and the reviewer must be a *different* agent/model (or the user). This is the deliberate answer to "self-closing subagents mark their own homework." Pair it with `run:`-backed DoD so most of the audit is machine-checked rather than trusted.
+- **An agent never closes its own task, and the reviewer is adversarial.** Closing is split into author and reviewer roles, and the reviewer must be a *different* agent/model (or the user). This is the deliberate answer to "self-closing subagents mark their own homework." The reviewer's mandate is refute-first — prove the task is *not* done (missing files/features/wiring, run the linters, write red-tests, nitpick the diff) rather than confirm it. Pair it with `run:`-backed DoD so most of the audit is machine-checked rather than trusted.
+- **A rejection reworks, it doesn't fix-in-place — and the loop has a guard.** When the reviewer refutes, `task.sh reject` sends the task back to `in_progress` for a fixer (a third role, distinct from the reviewer) and bumps a counter. The reviewer never fixes-and-closes its own finding. Past two rejections the task is set to `blocked` and the kanban stops — an autonomous rework loop that can't thrash forever, and escalates to a human when two cycles didn't converge.
 - **Standalone chores can skip the epic.** One-off `chore`/`bugfix` work can live directly under a milestone (`task.sh new M1-x - "..."`), so a 2-line fix isn't buried under PRD/epic/DoD ceremony. Feature work still belongs in an epic so the integration-verify gate covers it.
 
 ## Migration from v1

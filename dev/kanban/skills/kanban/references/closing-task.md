@@ -32,6 +32,7 @@ If you find yourself wanting to close with unchecked items, you have three optio
 - [ ] (reviewer) Every Actions checkbox is [x] (no [ ] or [!])
 - [ ] (reviewer) Every Definition of Done checkbox is [x] (no [ ] or [!])
 - [ ] (reviewer) Attack each DoD item: don't re-confirm it, try to break it — re-run the test, re-grep the code, re-run the scenario with adversarial input
+- [ ] (reviewer) If ANY attempt to disprove succeeded: run `task.sh reject <path> "why"`, record findings in Discussion, and hand to a fixer — do NOT fix-and-close yourself (see "When the reviewer refutes")
 - [ ] (reviewer) Add the closing Discussion entry confirming the audit AND what you tried to break
 - [ ] (reviewer) Update status from in_progress to done (ONLY if every attempt to disprove failed)
 - [ ] Tell the user the task is closed, with the branch name and a one-line summary
@@ -44,7 +45,8 @@ If you find yourself wanting to close with unchecked items, you have three optio
 The agent that wrote the code is the worst-placed to judge whether it's done — it shares every blind spot and every optimistic assumption that produced the code. So closing is split into two roles:
 
 - **Author** — does the work, keeps checkboxes honest, runs `task.sh check` until it's green, commits, and then *hands off*. The author does **not** flip `status: done`. Instead it leaves a Discussion entry saying "ready for review" and listing how each DoD item can be verified.
-- **Reviewer** — a *different* agent or model — runs the pre-close audit below from scratch with an adversarial goal: **disprove "done"**. It tries to prove work is missing, runs the language's linters, writes red-tests to attack the gaps, and attacks each DoD claim rather than re-confirming it. It flips `status: done` and writes the closing Discussion entry **only when every attempt to disprove completeness has failed**.
+- **Reviewer** — a *different* agent or model — runs the pre-close audit below from scratch with an adversarial goal: **disprove "done"**. It tries to prove work is missing, runs the language's linters, writes red-tests to attack the gaps, and attacks each DoD claim rather than re-confirming it. It flips `status: done` and writes the closing Discussion entry **only when every attempt to disprove completeness has failed**. When it *does* find a defect, it does not fix it — it runs `task.sh reject`, records the findings, and hands back to a fixer (see "When the reviewer refutes: the rework loop").
+- **Fixer** — an author pass triggered by a rejection: a *different* agent than the reviewer, it reads the reviewer's findings, reworks the code, and hands back for a fresh review. The same "never mark your own homework" rule applies — the fixer never closes the task it just fixed.
 
 How to satisfy "different agent/model" in practice, strongest first:
 
@@ -151,6 +153,50 @@ The reviewer's reputation here is a feature, not a bug: a task that survives a g
 - Glance through the Discussion entries. Would a future session understand the decisions?
 - If a non-trivial choice was made during this task but never logged, log it now (with today's date) — better late than never.
 - If a DoD item was changed during the task, is the change documented in Discussion?
+
+## When the reviewer refutes: the rework loop
+
+If any step above found a real defect — missing work, a failing red-test, a blocking nit — the task does **not** close. It enters a rework loop.
+
+**The reviewer does not fix the code itself and then close.** If it patched the problem and flipped `status: done`, it would be marking its own homework — the exact trust gap the author/reviewer split exists to prevent. The reviewer's job ends at *finding and recording*; fixing is a fresh author pass.
+
+The loop, one cycle:
+
+```
+reviewer refutes ──▶ task.sh reject <path> "why"   (status → in_progress, review_rejections++)
+                          │
+                          ▼
+      fixer agent picks up the diff + the reviewer's findings from ## Discussion,
+      fixes them NOW, gets `task.sh check` green, commits, hands back "ready for re-review"
+                          │
+                          ▼
+      a reviewer (DIFFERENT agent than the fixer) re-runs the full adversarial audit from scratch
+                          │
+              ┌───────────┴───────────┐
+        validates                 refutes again ──▶ back to the top
+        (closes the task)
+```
+
+Concretely:
+
+1. **Reviewer:** run `task.sh reject <task-path> "one-line reason"`. It bumps `review_rejections`, sends the task back to `status: in_progress`, and (past the limit) stops the run — see the guard below. Then write the findings in full into `## Discussion` (dated), so the fixer knows exactly what to fix. The script moves state; you supply the detail.
+2. **Fixer** (an author pass — must be a *different* agent than the reviewer, same as the original author-vs-reviewer rule): read the diff and the reviewer's `## Discussion` findings, fix them immediately, re-run `task.sh check` until green, commit on the task branch, and leave a "ready for re-review" entry.
+3. **Reviewer** (again, different from the fixer): re-run the *entire* pre-close audit from scratch — not just a spot-check of the fixed item. A fix often breaks something the first pass had cleared.
+4. Repeat until the reviewer validates and closes, or the guard trips.
+
+### The anti-looping guard
+
+An autonomous loop can thrash: fix, reject, fix, reject, forever. The guard caps it. `task.sh reject` counts rejections in `review_rejections`, and **once a task has been rejected more than twice (the 3rd rejection), the script sets `status: blocked`, exits with code `3`, and the kanban STOPS.** That is a hard escalation: do not start another fix attempt. Tell the user the task can't be closed automatically — the rework loop isn't converging and it needs a human decision (rescope, split, change of approach, or accept a known limitation). Two automated rework cycles is the ceiling; a third failure means the problem is not one more patch away.
+
+- The counter accumulates for the life of the task; a successful rework does not reset it. This is deliberate — a task that keeps limping past review shouldn't be able to reset its way around the limit.
+- `MAX_REJECTS` defaults to 2. It can be overridden per run (`MAX_REJECTS=3 task.sh reject ...`) but the default exists to force the escalation; prefer raising it only when the user asks.
+
+### Reject vs. follow-up: which one
+
+Not every finding feeds the reject loop.
+
+- **In-scope defect** (the task's own DoD/scope isn't actually met — missing wiring, unhandled error the task owned, a blocking nit in the task's diff) → `task.sh reject` + rework. This is what the loop is for.
+- **Out-of-scope or large** (the finding is real but belongs to different work — a pre-existing bug the task merely touched, a refactor the task shouldn't grow to include) → open a **follow-up task** (`bugfix` with a regression test, or a new feature task) linked via `blocked_by`, and don't spend a reject on it. Use judgment; when in doubt, reject and rework rather than defer.
 
 ## The closing Discussion entry
 

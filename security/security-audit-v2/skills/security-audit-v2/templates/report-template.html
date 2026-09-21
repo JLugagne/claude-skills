@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Assessment Report — {{PROJECT_NAME}}</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --accent: #6366f1;
+      --critical: #ef4444;
+      --critical-bg: rgba(239, 68, 68, 0.15);
+      --high: #f97316;
+      --high-bg: rgba(249, 115, 22, 0.15);
+      --medium: #eab308;
+      --medium-bg: rgba(234, 179, 8, 0.15);
+      --low: #3b82f6;
+      --low-bg: rgba(59, 130, 246, 0.15);
+      --info: #64748b;
+      --info-bg: rgba(100, 116, 139, 0.15);
+      --confirmed: #10b981;
+      --confirmed-bg: rgba(16, 185, 129, 0.15);
+      --likely: #f59e0b;
+      --likely-bg: rgba(245, 158, 11, 0.15);
+      --theoretical: #6b7280;
+      --theoretical-bg: rgba(107, 114, 128, 0.15);
+      --code-bg: #090d16;
+      --table-header: #1e293b;
+      --table-row-alt: #162032;
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --card-border: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #4f46e5;
+      --code-bg: #f1f5f9;
+      --table-header: #f1f5f9;
+      --table-row-alt: #f8fafc;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem;
+    }
+
+    header.report-header {
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 2rem;
+      margin-bottom: 2.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1.5rem;
+    }
+
+    .header-title h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--text-main);
+      margin-bottom: 0.5rem;
+    }
+
+    .header-subtitle {
+      font-size: 1rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .btn-theme {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 600;
+      transition: all 0.2s ease;
+    }
+    .btn-theme:hover {
+      border-color: var(--primary);
+    }
+
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .kpi-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-card .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .kpi-card .kpi-value {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .kpi-card.critical .kpi-value { color: var(--critical); }
+    .kpi-card.high .kpi-value { color: var(--high); }
+    .kpi-card.medium .kpi-value { color: var(--medium); }
+    .kpi-card.confirmed .kpi-value { color: var(--confirmed); }
+
+    /* Section Styling */
+    section {
+      margin-bottom: 3rem;
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      border-left: 4px solid var(--primary);
+      padding-left: 0.75rem;
+      color: var(--text-main);
+    }
+
+    /* Scope & Preconditions Box */
+    .scope-box {
+      background-color: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .scope-box h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .scope-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .scope-item {
+      padding: 0.75rem;
+      background: var(--code-bg);
+      border-radius: 0.5rem;
+      border-left: 3px solid var(--accent);
+    }
+
+    .scope-item strong {
+      display: block;
+      color: var(--text-main);
+      margin-bottom: 0.25rem;
+    }
+
+    /* Filter Controls */
+    .table-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.4rem 0.8rem;
+      border-radius: 0.375rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    /* Vulnerability Table */
+    .table-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      background: var(--card-bg);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+
+    table.vuln-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    table.vuln-table th {
+      background: var(--table-header);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--card-border);
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    table.vuln-table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--card-border);
+      vertical-align: middle;
+    }
+
+    table.vuln-table tr:nth-child(even) {
+      background: var(--table-row-alt);
+    }
+
+    table.vuln-table tr:hover {
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+      white-space: nowrap;
+    }
+
+    .badge-critical { background: var(--critical-bg); color: var(--critical); border: 1px solid var(--critical); }
+    .badge-high { background: var(--high-bg); color: var(--high); border: 1px solid var(--high); }
+    .badge-medium { background: var(--medium-bg); color: var(--medium); border: 1px solid var(--medium); }
+    .badge-low { background: var(--low-bg); color: var(--low); border: 1px solid var(--low); }
+    .badge-info { background: var(--info-bg); color: var(--info); border: 1px solid var(--info); }
+
+    .badge-confirmed { background: var(--confirmed-bg); color: var(--confirmed); border: 1px solid var(--confirmed); }
+    .badge-likely { background: var(--likely-bg); color: var(--likely); border: 1px solid var(--likely); }
+    .badge-theoretical { background: var(--theoretical-bg); color: var(--theoretical); border: 1px solid var(--theoretical); }
+
+    .tag-domain {
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-family: monospace;
+      font-weight: 600;
+    }
+
+    .tag-reach {
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .reach-yes { color: var(--critical); }
+    .reach-configured { color: var(--medium); }
+    .reach-dev { color: var(--text-muted); }
+
+    /* Detail Cards */
+    .finding-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      margin-bottom: 2rem;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      scroll-margin-top: 2rem;
+    }
+
+    .finding-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: var(--table-header);
+    }
+
+    .finding-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .finding-body {
+      padding: 1.5rem;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--card-border);
+      font-size: 0.85rem;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .meta-label {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+
+    .meta-value {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .finding-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .finding-section h4 {
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 0.875rem;
+    }
+
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      overflow-x: auto;
+      color: #e2e8f0;
+      margin-top: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    p code, td code {
+      background: var(--code-bg);
+      padding: 0.15rem 0.35rem;
+      border-radius: 0.25rem;
+      color: var(--primary);
+      border: 1px solid var(--card-border);
+    }
+
+    .poc-box {
+      border-left: 4px solid var(--confirmed);
+      background: rgba(16, 185, 129, 0.05);
+      padding: 1rem;
+      border-radius: 0.375rem;
+      margin-top: 0.5rem;
+    }
+
+    .remediation-box {
+      border-left: 4px solid var(--primary);
+      background: rgba(56, 189, 248, 0.05);
+      padding: 1rem;
+      border-radius: 0.375rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Attack Chains */
+    .chain-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .chain-card h3 {
+      font-size: 1.15rem;
+      color: var(--critical);
+      margin-bottom: 0.5rem;
+    }
+
+    .mermaid {
+      background: var(--code-bg);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin: 1rem 0;
+      text-align: center;
+      overflow-x: auto;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding-top: 2rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      text-align: center;
+      margin-top: 4rem;
+    }
+
+    @media print {
+      body { background: #ffffff; color: #000000; }
+      .container { max-width: 100%; padding: 0; }
+      .btn-theme, .table-controls { display: none; }
+      .finding-card { break-inside: avoid; border: 1px solid #cbd5e1; }
+      pre { background: #f8fafc; color: #000000; border: 1px solid #cbd5e1; }
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'dark' });</script>
+</head>
+<body>
+
+<div class="container">
+  <!-- Report Header -->
+  <header class="report-header">
+    <div class="header-title">
+      <h1>Security Assessment Report</h1>
+      <div class="header-subtitle">
+        <span><strong>Target:</strong> {{PROJECT_NAME}}</span>
+        <span><strong>Ref:</strong> <code>{{COMMIT_SHA}}</code> ({{BRANCH}})</span>
+        <span><strong>Date:</strong> {{AUDIT_DATE}}</span>
+        <span><strong>Auditor:</strong> Security-Audit-v2 Engine</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <button class="btn-theme" onclick="toggleTheme()">🌓 Toggle Theme</button>
+    </div>
+  </header>
+
+  <!-- KPI Executive Metrics -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Findings</div>
+      <div class="kpi-value">{{TOTAL_FINDINGS}}</div>
+    </div>
+    <div class="kpi-card critical">
+      <div class="kpi-label">Critical Severity</div>
+      <div class="kpi-value">{{CRITICAL_COUNT}}</div>
+    </div>
+    <div class="kpi-card high">
+      <div class="kpi-label">High Severity</div>
+      <div class="kpi-value">{{HIGH_COUNT}}</div>
+    </div>
+    <div class="kpi-card medium">
+      <div class="kpi-label">Medium Severity</div>
+      <div class="kpi-value">{{MEDIUM_COUNT}}</div>
+    </div>
+    <div class="kpi-card confirmed">
+      <div class="kpi-label">Confirmed (PoC Proven)</div>
+      <div class="kpi-value">{{CONFIRMED_POC_COUNT}}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Domains Audited</div>
+      <div class="kpi-value">{{DOMAINS_COUNT}}</div>
+    </div>
+  </div>
+
+  <!-- Scope & Agreed Boundaries -->
+  <section>
+    <h2 class="section-title">Audit Scope & Noise Filtering (Phase 0 Verdict)</h2>
+    <div class="scope-box">
+      <h3>Pre-Audit Scope Agreement</h3>
+      <p style="color: var(--text-muted); margin-bottom: 1rem;">
+        The following boundaries were negotiated with the operator prior to subagent dispatch to eliminate false positives:
+      </p>
+      <div class="scope-grid">
+        <div class="scope-item">
+          <strong>Hardcoded Secrets Policy</strong>
+          <span>{{SCOPE_SECRETS_POLICY}}</span>
+        </div>
+        <div class="scope-item">
+          <strong>Default / Dev Configurations</strong>
+          <span>{{SCOPE_CONFIG_POLICY}}</span>
+        </div>
+        <div class="scope-item">
+          <strong>Infrastructure / CI-CD Scope</strong>
+          <span>{{SCOPE_INFRA_POLICY}}</span>
+        </div>
+        <div class="scope-item">
+          <strong>Audited Functional Domains</strong>
+          <span>{{SCOPE_DOMAINS_LIST}}</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Executive Summary -->
+  <section>
+    <h2 class="section-title">Executive Summary</h2>
+    <div class="scope-box" style="line-height: 1.8;">
+      {{EXECUTIVE_SUMMARY_TEXT}}
+    </div>
+  </section>
+
+  <!-- Vulnerability Index Table -->
+  <section>
+    <h2 class="section-title">Vulnerabilities Index</h2>
+    
+    <div class="table-controls">
+      <div class="filter-group">
+        <button class="filter-btn active" onclick="filterSeverity('all', this)">All Severities</button>
+        <button class="filter-btn" onclick="filterSeverity('Critical', this)">Critical</button>
+        <button class="filter-btn" onclick="filterSeverity('High', this)">High</button>
+        <button class="filter-btn" onclick="filterSeverity('Medium', this)">Medium</button>
+        <button class="filter-btn" onclick="filterSeverity('Low', this)">Low</button>
+      </div>
+      <div class="filter-group">
+        <button class="filter-btn active" onclick="filterRepro('all', this)">All Repro</button>
+        <button class="filter-btn" onclick="filterRepro('confirmed', this)">PoC Confirmed</button>
+        <button class="filter-btn" onclick="filterRepro('likely', this)">Likely</button>
+        <button class="filter-btn" onclick="filterRepro('theoretical', this)">Theoretical</button>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="vuln-table" id="vulnTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Domain</th>
+            <th>CVSS v3.1</th>
+            <th>Reproducibility</th>
+            <th>Reachability</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- ROW_TEMPLATE_START -->
+          {{INDEX_TABLE_ROWS}}
+          <!-- ROW_TEMPLATE_END -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Detailed Findings -->
+  <section>
+    <h2 class="section-title">Detailed Vulnerability Reports</h2>
+    <div id="findingsContainer">
+      <!-- FINDING_CARD_TEMPLATE_START -->
+      {{DETAILED_FINDINGS_CARDS}}
+      <!-- FINDING_CARD_TEMPLATE_END -->
+    </div>
+  </section>
+
+  <!-- Multi-Stage Attack Chains -->
+  <section>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+      <h2 class="section-title" style="margin-bottom: 0;">Attack Chains & Scenarios</h2>
+      <a href="attack-chains.html" style="background: var(--card-bg); border: 1px solid var(--primary); color: var(--primary); padding: 0.45rem 1rem; border-radius: 0.5rem; text-decoration: none; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.5rem;">
+        🔗 Open Dedicated Attack Chains Report (attack-chains.html) &rarr;
+      </a>
+    </div>
+    <div id="chainsContainer">
+      {{ATTACK_CHAINS_CONTENT}}
+    </div>
+  </section>
+
+  <!-- Sprint Coverage Audit Trail -->
+  <section>
+    <h2 class="section-title">Sprint Coverage & Checklists Verification</h2>
+    <div class="scope-box">
+      {{DOMAIN_SPRINT_COVERAGE_SUMMARY}}
+    </div>
+  </section>
+
+  <footer>
+    <p>Security Assessment Report generated by <strong>security-audit-v2</strong> engine.</p>
+    <p>Confidential & Proprietary — For internal remediation only.</p>
+  </footer>
+</div>
+
+<script>
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const target = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', target);
+  }
+
+  function filterSeverity(severity, btn) {
+    document.querySelectorAll('.filter-group:first-child .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  }
+
+  function filterRepro(repro, btn) {
+    document.querySelectorAll('.filter-group:last-child .filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const activeSev = document.querySelector('.filter-group:first-child .filter-btn.active').textContent.trim();
+    const activeRep = document.querySelector('.filter-group:last-child .filter-btn.active').textContent.trim();
+
+    const rows = document.querySelectorAll('#vulnTable tbody tr');
+    rows.forEach(row => {
+      const rowSev = row.getAttribute('data-severity');
+      const rowRep = row.getAttribute('data-repro');
+
+      let sevMatch = (activeSev === 'All Severities') || (rowSev === activeSev);
+      let repMatch = (activeRep === 'All Repro') || 
+                     (activeRep === 'PoC Confirmed' && rowRep === 'confirmed') ||
+                     (activeRep === 'Likely' && rowRep === 'likely') ||
+                     (activeRep === 'Theoretical' && rowRep === 'theoretical');
+
+      row.style.display = (sevMatch && repMatch) ? '' : 'none';
+    });
+  }
+</script>
+
+</body>
+</html>

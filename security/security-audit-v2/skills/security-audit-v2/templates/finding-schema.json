@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SecurityAuditFinding",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "domain",
+    "cwe",
+    "owasp",
+    "cvss_score",
+    "cvss_vector",
+    "severity",
+    "confidence",
+    "reproducibility",
+    "files",
+    "description",
+    "impact",
+    "poc_test_path",
+    "remediation",
+    "production_reachable"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Short unique identifier, e.g. F-AUTH-001 or F-PAY-002"
+    },
+    "title": {
+      "type": "string",
+      "description": "Clear, descriptive title of the vulnerability"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Functional domain (e.g. auth, payment, traversal-filesystem, api)"
+    },
+    "cwe": {
+      "type": "string",
+      "description": "CWE ID, e.g. CWE-89, CWE-22, CWE-79"
+    },
+    "owasp": {
+      "type": "string",
+      "description": "OWASP Top 10 category, e.g. A01:2021 or API1:2023"
+    },
+    "cvss_score": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 10.0,
+      "description": "CVSS v3.1 base score"
+    },
+    "cvss_vector": {
+      "type": "string",
+      "description": "CVSS v3.1 vector string, e.g. CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["Critical", "High", "Medium", "Low", "Info"],
+      "description": "Severity rating derived from CVSS score"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["confirmed", "likely", "theoretical"],
+      "description": "Confidence level based on proof of exploitability"
+    },
+    "reproducibility": {
+      "type": "string",
+      "enum": ["confirmed-poc", "likely-trace", "theoretical-pattern"],
+      "description": "Reproducibility state: confirmed-poc (tested & verified), likely-trace (code flow traced but env limited), theoretical-pattern (static analysis only)"
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of affected files and line numbers (e.g. path/to/file.go:123)"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed explanation of the flaw and its root cause"
+    },
+    "impact": {
+      "type": "string",
+      "description": "Realistic business and technical impact"
+    },
+    "data_flow": {
+      "type": "string",
+      "description": "Attacker-controlled source -> transformation -> sensitive sink flow"
+    },
+    "poc_command": {
+      "type": ["string", "null"],
+      "description": "Exact shell command to run the reproduction PoC test"
+    },
+    "poc_test_path": {
+      "type": ["string", "null"],
+      "description": "Path to the reproduction test file relative to repo root"
+    },
+    "remediation": {
+      "type": "string",
+      "description": "Concrete code fix or configuration change for this specific stack"
+    },
+    "deployment_preconditions": {
+      "type": ["string", "null"],
+      "description": "Configuration or deployment preconditions required for exploitability"
+    },
+    "requires_wiring": {
+      "type": ["string", "null"],
+      "description": "One-line configuration or wiring change that mitigates the issue"
+    },
+    "production_reachable": {
+      "type": "string",
+      "enum": ["yes", "only-if-configured", "no"],
+      "description": "Whether reachable in default production deploy, only if configured, or dev surface only"
+    }
+  }
+}

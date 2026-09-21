@@ -62,11 +62,23 @@ To maximize signal and eliminate false positives, the audit operates under clear
   * Integer overflow/underflow leading to memory corruption or bounds bypass.
   * Go `unsafe.Pointer` conversions, Cgo memory leaks/FFI boundaries, Rust `unsafe` blocks.
   * Concurrency data races on shared maps/slices (`go test -race`), goroutine leaks, and deadlocks.
-* **Resource Exhaustion & Application Denial of Service (OWASP A04, API4)**:
+* **Application Denial of Service (AppDoS / DDoS) & Resource Exhaustion (OWASP A04, API4)**:
+  * HTTP server timeout configurations & Slowloris connection starvation (missing `ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`).
+  * Missing or bypassable rate limiting on public and compute-heavy endpoints.
+  * Asymmetric CPU amplification: unauthenticated expensive crypto operations, password hashing, image processing, or PDF rendering.
+  * Database query amplification and N+1 cascade queries on public API endpoints.
+  * Cache stampede / thundering herd vulnerabilities on high-concurrency resources.
   * Unbounded request body reads (`io.ReadAll` without `io.LimitReader`).
   * Decompression bombs (Zip bombs, XML Billion Laughs).
   * Unbounded database queries and uncapped pagination parameters.
   * Regular Expression Denial of Service (ReDoS) on user input.
+* **Predictability, Guessability & Account Enumeration (CWE-330, CWE-340, CWE-200)**:
+  * Sequential auto-increment database IDs (`/users/123`, `/invoices/4500`) leaking business metrics and enabling trivial scraping.
+  * Predictable, short, or low-entropy promo codes, gift cards, invitation codes, and voucher tokens.
+  * UUID version misuse: predictable UUID v1 (timestamp and MAC address sequence extrapolation) instead of cryptographically secure random UUID v4/v7.
+  * Insecure PRNG token generation (`math/rand` in Go, `Math.random()`, timestamp seeds) for password resets or email activations.
+  * Account harvesting and user enumeration via differentiated error messages ("Email not found" vs "Bad password") or status codes.
+  * Timing-based user enumeration (e.g. immediate return when user does not exist vs expensive Argon2/bcrypt hash computation).
 * **Cryptography, Secrets & Information Exposure (OWASP A02, A09)**:
   * Weak algorithms (MD5, SHA-1, DES, ECB mode) and insecure PRNG (`math/rand`).
   * Timing attacks on secret comparisons (lack of constant-time comparison).
@@ -93,9 +105,9 @@ To maximize signal and eliminate false positives, the audit operates under clear
 * **Development & Test Fixtures**:
   * Mocks, unit test helpers (`*_test.go`, `tests/`), seed fixtures, and local example codes are excluded unless project documentation instructs operators to deploy them in production.
   * Test credentials, dummy JWTs, and local `.env.example` placeholders are not reported as secret leaks.
-* **Volumetric Network DDoS (L3/L4)**: Bandwidth saturation, SYN floods, and UDP amplification are infrastructure concerns managed by CDN/WAF layers and outside the scope of application source code auditing.
+* **Volumetric Network DDoS (L3/L4)**: Raw bandwidth flooding, SYN floods, and UDP reflection are managed at the network/CDN/WAF layer. (Application-Layer L7 DDoS, slowloris connection starvation, amplification vectors, and rate-limiting gaps **are** audited).
 * **Physical & Host Compromise**: Physical machine access, root server compromise, or compromised hypervisors are excluded from the threat model unless specifically requested.
-* **UUID Guessability**: High-entropy UUIDs (v4) are assumed unguessable; missing authorization checks on them are flagged as BOLA, not random guessability.
+* **Cryptographic Entropy of Standard UUID v4**: High-entropy random UUIDs (v4) are assumed unguessable; missing authorization checks on them are flagged as BOLA. (Predictable sequential IDs, UUID v1 timestamp sequences, and PRNG-generated tokens **are** audited for predictability).
 * **Static Internal Regexes**: ReDoS is only investigated when user-supplied input is matched against regexes with demonstrable catastrophic backtracking.
 
 ---

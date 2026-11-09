@@ -1,0 +1,196 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CodeReviewFinding",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "category",
+    "domain",
+    "severity",
+    "confidence",
+    "files",
+    "description",
+    "rationale",
+    "evidence",
+    "suggested_comment",
+    "proposed_action",
+    "status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Short unique identifier, e.g. Q-NAMING-001 or Q-DEADCODE-014"
+    },
+    "title": {
+      "type": "string",
+      "description": "Clear, descriptive title of the issue"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "memory-usage",
+        "comments-verbosity",
+        "naming",
+        "architecture",
+        "dead-code",
+        "tests-missing",
+        "tests-unnecessary",
+        "adversarial-correctness",
+        "persistence",
+        "resilience",
+        "project-conventions"
+      ],
+      "description": "Quality dimension this finding belongs to"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Functional domain (full-project scope), 'mr-diff' (MR scope) or 'cross-cutting' (Phase 1.5 passes)"
+    },
+    "severity": {
+      "type": "string",
+      "enum": [
+        "Critical",
+        "Major",
+        "Minor",
+        "Nitpick"
+      ],
+      "description": "Impact if left unaddressed"
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "verified",
+        "opinion",
+        "needs-confirmation"
+      ],
+      "description": "verified: proven inside the repo (reference search, trace, quoted assertion, EXPLAIN plan, failing probe). opinion: a judgment call the reviewer should weigh. needs-confirmation: depends on a system outside the reviewed repo; settle_with is then required."
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Affected files and line numbers (e.g. path/to/file.go:123)"
+    },
+    "description": {
+      "type": "string",
+      "description": "What is wrong, in concrete terms"
+    },
+    "rationale": {
+      "type": "string",
+      "description": "Why it matters: maintainability, correctness, performance, or readability impact"
+    },
+    "evidence": {
+      "type": "string",
+      "description": "The proof: reference-search command and result, code excerpt, or quoted assertion"
+    },
+    "settle_with": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The exact command, request or test that proves or refutes the finding in one run. Required when confidence is needs-confirmation, optional otherwise."
+    },
+    "suggested_comment": {
+      "type": "string",
+      "description": "The exact review comment text to leave, ready to post as-is. User-editable in the report."
+    },
+    "proposed_action": {
+      "type": "string",
+      "description": "The concrete fix or next step (e.g. 'delete unused func X', 'rename Y to Z', 'add test for error path in foo()'). User-editable in the report."
+    },
+    "introduced_by_mr": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "yes",
+        "no",
+        "unknown",
+        null
+      ],
+      "description": "MR scope only: whether the diff introduced this issue, or it pre-existed. Null in full-project scope."
+    },
+    "round": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "new",
+        "repeat",
+        "regression",
+        null
+      ],
+      "description": "Against earlier runs of this review: new, repeat (filed before and still present), or regression (fixed before, back again). Null when there is no earlier run."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "validated",
+        "invalidated",
+        "delayed"
+      ],
+      "default": "pending",
+      "description": "Triage state, set by the user in report.html"
+    },
+    "reviewer_note": {
+      "type": "string",
+      "default": "",
+      "description": "Free-text note the user attaches when invalidating or delaying a finding"
+    },
+    "questions": {
+      "type": "array",
+      "default": [],
+      "description": "Threaded discussion on this finding, built up in report.html: the user asks a question ('user' role) and pastes back an LLM's answer ('assistant' role). Always empty ([]) when a finding is first generated — never pre-populated by review subagents.",
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "text"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO 8601 timestamp, set client-side when the message is added"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "confidence": {
+            "const": "needs-confirmation"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "settle_with"
+        ],
+        "properties": {
+          "settle_with": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}

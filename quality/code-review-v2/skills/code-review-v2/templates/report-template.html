@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Review Report — {{PROJECT_NAME}}</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --primary: #38bdf8;
+    --primary-hover: #0ea5e9;
+    --accent: #6366f1;
+    --critical: #ef4444; --critical-bg: rgba(239, 68, 68, 0.15);
+    --major: #f97316;    --major-bg: rgba(249, 115, 22, 0.15);
+    --minor: #eab308;    --minor-bg: rgba(234, 179, 8, 0.15);
+    --nitpick: #3b82f6;  --nitpick-bg: rgba(59, 130, 246, 0.15);
+    --pending: #64748b;     --pending-bg: rgba(100, 116, 139, 0.15);
+    --validated: #10b981;   --validated-bg: rgba(16, 185, 129, 0.15);
+    --invalidated: #ef4444; --invalidated-bg: rgba(239, 68, 68, 0.15);
+    --delayed: #a855f7;     --delayed-bg: rgba(168, 85, 247, 0.15);
+    --verified: #10b981;
+    --opinion: #f59e0b;
+    --question-open: #f59e0b;   --question-open-bg: rgba(245, 158, 11, 0.15);
+    --question-answered: #22d3ee; --question-answered-bg: rgba(34, 211, 238, 0.15);
+    --code-bg: #090d16;
+    --table-header: #1e293b;
+    --input-bg: #0b1220;
+  }
+  [data-theme="light"] {
+    --bg: #f8fafc; --card-bg: #ffffff; --card-border: #e2e8f0;
+    --text-main: #0f172a; --text-muted: #64748b;
+    --primary: #0284c7; --primary-hover: #0369a1; --accent: #4f46e5;
+    --code-bg: #f1f5f9; --table-header: #f1f5f9; --input-bg: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg); color: var(--text-main); line-height: 1.6;
+  }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+
+  header.report-header {
+    border-bottom: 1px solid var(--card-border);
+    padding-bottom: 2rem; margin-bottom: 2rem;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    flex-wrap: wrap; gap: 1.5rem;
+  }
+  .header-title h1 { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 0.5rem; }
+  .header-subtitle { font-size: 0.95rem; color: var(--text-muted); display: flex; gap: 1.25rem; flex-wrap: wrap; }
+  .header-controls { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+
+  .btn {
+    background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-main);
+    padding: 0.5rem 0.9rem; border-radius: 0.5rem; cursor: pointer;
+    font-size: 0.82rem; font-weight: 600; transition: all 0.15s ease;
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-primary { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-hover); color: #ffffff; }
+  .btn-danger:hover { border-color: var(--invalidated); color: var(--invalidated); }
+
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .kpi-card {
+    background-color: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 0.75rem; padding: 1rem 1.25rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  .kpi-card .kpi-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.35rem; }
+  .kpi-card .kpi-value { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+  .kpi-card.critical .kpi-value { color: var(--critical); }
+  .kpi-card.major .kpi-value { color: var(--major); }
+  .kpi-card.minor .kpi-value { color: var(--minor); }
+  .kpi-card.validated .kpi-value { color: var(--validated); }
+  .kpi-card.invalidated .kpi-value { color: var(--invalidated); }
+  .kpi-card.delayed .kpi-value { color: var(--delayed); }
+  .kpi-card.pending .kpi-value { color: var(--pending); }
+
+  section { margin-bottom: 2.5rem; }
+  h2.section-title {
+    font-size: 1.35rem; font-weight: 700; margin-bottom: 1.1rem;
+    border-left: 4px solid var(--primary); padding-left: 0.75rem;
+  }
+
+  .scope-box {
+    background-color: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 2rem;
+  }
+  .scope-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; font-size: 0.88rem; }
+  .scope-item { padding: 0.75rem; background: var(--code-bg); border-radius: 0.5rem; border-left: 3px solid var(--accent); }
+  .scope-item strong { display: block; color: var(--text-main); margin-bottom: 0.25rem; }
+
+  .table-controls {
+    display: flex; flex-wrap: wrap; gap: 0.9rem; margin-bottom: 1.25rem;
+    align-items: center; justify-content: space-between;
+  }
+  .filter-group { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .filter-group-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-right: 0.3rem; }
+  .filter-btn {
+    background: var(--card-bg); border: 1px solid var(--card-border); color: var(--text-muted);
+    padding: 0.35rem 0.7rem; border-radius: 0.375rem; font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s ease;
+  }
+  .filter-btn.active, .filter-btn:hover { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+  #searchInput {
+    background: var(--input-bg); border: 1px solid var(--card-border); color: var(--text-main);
+    padding: 0.45rem 0.8rem; border-radius: 0.5rem; font-size: 0.85rem; min-width: 220px;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.22rem 0.55rem;
+    border-radius: 9999px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.025em; white-space: nowrap;
+  }
+  .badge-critical { background: var(--critical-bg); color: var(--critical); border: 1px solid var(--critical); }
+  .badge-major    { background: var(--major-bg);    color: var(--major);    border: 1px solid var(--major); }
+  .badge-minor    { background: var(--minor-bg);    color: var(--minor);    border: 1px solid var(--minor); }
+  .badge-nitpick  { background: var(--nitpick-bg);  color: var(--nitpick);  border: 1px solid var(--nitpick); }
+
+  .badge-status-pending     { background: var(--pending-bg);     color: var(--pending);     border: 1px solid var(--pending); }
+  .badge-status-validated   { background: var(--validated-bg);   color: var(--validated);   border: 1px solid var(--validated); }
+  .badge-status-invalidated { background: var(--invalidated-bg); color: var(--invalidated); border: 1px solid var(--invalidated); }
+  .badge-status-delayed     { background: var(--delayed-bg);     color: var(--delayed);     border: 1px solid var(--delayed); }
+
+  .tag-category {
+    background: rgba(99, 102, 241, 0.15); color: #818cf8;
+    padding: 0.2rem 0.5rem; border-radius: 0.25rem; font-size: 0.72rem; font-family: monospace; font-weight: 600;
+  }
+  .tag-confidence { font-size: 0.72rem; font-weight: 700; }
+  .tag-confidence.verified { color: var(--verified); }
+  .tag-confidence.opinion { color: var(--opinion); }
+  .tag-confidence.needs-confirmation { color: var(--opinion); text-decoration: underline dotted; }
+
+  .finding-card {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-left-width: 5px;
+    border-radius: 0.75rem; margin-bottom: 1.5rem; overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); scroll-margin-top: 2rem;
+  }
+  .finding-card.status-pending     { border-left-color: var(--pending); }
+  .finding-card.status-validated   { border-left-color: var(--validated); }
+  .finding-card.status-invalidated { border-left-color: var(--invalidated); opacity: 0.7; }
+  .finding-card.status-delayed     { border-left-color: var(--delayed); }
+
+  .finding-header {
+    padding: 1rem 1.25rem; border-bottom: 1px solid var(--card-border);
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 0.75rem; background: var(--table-header);
+  }
+  .finding-title { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+  .finding-header-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+  .finding-body { padding: 1.25rem; }
+
+  .meta-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.9rem;
+    margin-bottom: 1.1rem; padding-bottom: 1.1rem; border-bottom: 1px solid var(--card-border); font-size: 0.82rem;
+  }
+  .meta-item { display: flex; flex-direction: column; }
+  .meta-label { color: var(--text-muted); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.15rem; }
+  .meta-value { font-weight: 600; }
+  .meta-value code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-size: 0.82rem; color: var(--primary); }
+
+  .finding-section { margin-bottom: 1.1rem; }
+  .finding-section h4 {
+    font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--primary); margin-bottom: 0.4rem; font-weight: 700;
+  }
+  .finding-section p { font-size: 0.92rem; }
+
+  pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.85rem; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--card-border); border-radius: 0.5rem;
+    padding: 0.9rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+  }
+
+  .editable-box { border-left: 4px solid var(--accent); background: rgba(99, 102, 241, 0.05); padding: 0.9rem; border-radius: 0.375rem; }
+  textarea.edit-field {
+    width: 100%; min-height: 70px; resize: vertical; background: var(--input-bg);
+    border: 1px solid var(--card-border); color: var(--text-main); border-radius: 0.4rem;
+    padding: 0.6rem 0.7rem; font-family: inherit; font-size: 0.88rem; line-height: 1.5;
+  }
+  textarea.edit-field:focus { outline: none; border-color: var(--primary); }
+  .field-savemark { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.3rem; visibility: hidden; }
+  .field-savemark.show { visibility: visible; }
+
+  .triage-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.1rem; align-items: center; }
+  .triage-btn {
+    border-radius: 0.4rem; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700;
+    cursor: pointer; border: 1px solid var(--card-border); background: var(--card-bg); color: var(--text-main);
+  }
+  .triage-btn.validate:hover, .triage-btn.validate.active { background: var(--validated); border-color: var(--validated); color: #fff; }
+  .triage-btn.invalidate:hover, .triage-btn.invalidate.active { background: var(--invalidated); border-color: var(--invalidated); color: #fff; }
+  .triage-btn.delay:hover, .triage-btn.delay.active { background: var(--delayed); border-color: var(--delayed); color: #fff; }
+  .triage-btn.reset:hover { border-color: var(--text-muted); }
+
+  .note-field { margin-top: 0.7rem; display: none; }
+  .note-field.show { display: block; }
+
+  .badge-question-open     { background: var(--question-open-bg);     color: var(--question-open);     border: 1px solid var(--question-open); }
+  .badge-question-answered { background: var(--question-answered-bg); color: var(--question-answered); border: 1px solid var(--question-answered); }
+
+  .thread { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.8rem; }
+  .thread-empty { color: var(--text-muted); font-size: 0.85rem; }
+  .thread-msg {
+    border-radius: 0.5rem; padding: 0.6rem 0.8rem; max-width: 85%; font-size: 0.88rem;
+    border: 1px solid var(--card-border);
+  }
+  .thread-msg.user { align-self: flex-start; background: var(--code-bg); }
+  .thread-msg.assistant { align-self: flex-end; background: rgba(34, 211, 238, 0.08); border-color: var(--question-answered); }
+  .thread-msg-role { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.25rem; }
+  .thread-msg-text { white-space: pre-wrap; word-break: break-word; }
+  .thread-msg-time { font-size: 0.65rem; color: var(--text-muted); margin-top: 0.3rem; }
+
+  .thread-compose { display: flex; flex-direction: column; gap: 0.5rem; }
+  .thread-compose-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  details.thread-reply-paste { margin-top: 0.7rem; font-size: 0.85rem; }
+  details.thread-reply-paste summary { cursor: pointer; color: var(--primary); font-weight: 600; margin-bottom: 0.5rem; }
+  details.thread-reply-paste[open] summary { margin-bottom: 0.6rem; }
+
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    align-items: center; justify-content: center; z-index: 1000; padding: 1.5rem;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 0.75rem;
+    padding: 1.5rem; max-width: 700px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; gap: 0.9rem;
+  }
+  .modal-box h3 { font-size: 1.05rem; }
+  .modal-box textarea {
+    flex: 1; min-height: 320px; width: 100%; background: var(--input-bg); color: var(--text-main);
+    border: 1px solid var(--card-border); border-radius: 0.5rem; padding: 0.75rem; font-family: ui-monospace, monospace;
+    font-size: 0.82rem; line-height: 1.5; resize: vertical;
+  }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 0.6rem; align-items: center; }
+  .modal-copied-mark { font-size: 0.78rem; color: var(--validated); visibility: hidden; }
+  .modal-copied-mark.show { visibility: visible; }
+
+  footer { border-top: 1px solid var(--card-border); padding-top: 2rem; color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 3rem; }
+
+  @media print {
+    body { background: #ffffff; color: #000000; }
+    .container { max-width: 100%; padding: 0; }
+    .btn, .table-controls, .triage-bar, .modal-overlay, .thread-compose, details.thread-reply-paste { display: none; }
+    .finding-card { break-inside: avoid; border: 1px solid #cbd5e1; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header class="report-header">
+    <div class="header-title">
+      <h1>Code Review Report</h1>
+      <div class="header-subtitle">
+        <span><strong>Target:</strong> {{PROJECT_NAME}}</span>
+        <span><strong>Ref:</strong> <code>{{REVIEWED_REF}}</code></span>
+        <span><strong>Scope:</strong> {{SCOPE_MODE}} — {{SCOPE_DETAIL}}</span>
+        <span><strong>Date:</strong> {{REVIEW_DATE}}</span>
+      </div>
+    </div>
+    <div class="header-controls">
+      <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
+      <button class="btn" onclick="exportTriageJSON()">Export Triage JSON</button>
+      <button class="btn" onclick="exportValidatedMarkdown()">Export Validated as Markdown</button>
+      <button class="btn btn-danger" onclick="resetTriage()">Reset Triage</button>
+    </div>
+  </header>
+
+  <!-- KPIs (live, recomputed on every triage change) -->
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <section>
+    <h2 class="section-title">Scope</h2>
+    <div class="scope-box">
+      <div class="scope-grid">
+        <div class="scope-item"><strong>Review Scope</strong><span>{{SCOPE_MODE}}</span></div>
+        <div class="scope-item"><strong>Scope Detail</strong><span>{{SCOPE_DETAIL}}</span></div>
+        <div class="scope-item"><strong>Dimensions Audited</strong><span>{{DIMENSIONS_AUDITED}}</span></div>
+        <div class="scope-item"><strong>Reviewed Ref</strong><span><code>{{REVIEWED_REF}}</code></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="section-title">Findings</h2>
+    <div class="table-controls">
+      <div class="filter-group">
+        <span class="filter-group-label">Severity</span>
+        <span id="severityFilters"></span>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Category</span>
+        <span id="categoryFilters"></span>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Status</span>
+        <span id="statusFilters"></span>
+      </div>
+      <div class="filter-group">
+        <span class="filter-group-label">Questions</span>
+        <span id="questionFilters"></span>
+      </div>
+      <input id="searchInput" type="text" placeholder="Search title, file, description…" oninput="applyFilters()">
+    </div>
+
+    <div id="findingsContainer"></div>
+    <p id="emptyState" style="display:none; color: var(--text-muted); text-align:center; padding: 2rem;">No findings match the current filters.</p>
+  </section>
+
+  <footer>
+    <p>Code Review Report generated by <strong>code-review-v2</strong>. Triage decisions are saved to this browser's local storage as you go — use <em>Export Triage JSON</em> to keep a permanent record.</p>
+  </footer>
+</div>
+
+<div class="modal-overlay" id="promptModalOverlay" onclick="if (event.target === this) closePromptModal()">
+  <div class="modal-box">
+    <h3 id="promptModalTitle">Prompt</h3>
+    <textarea id="promptModalText" readonly></textarea>
+    <div class="modal-actions">
+      <span class="modal-copied-mark" id="promptModalCopiedMark">Copied to clipboard</span>
+      <button class="btn" onclick="closePromptModal()">Close</button>
+      <button class="btn btn-primary" onclick="copyModalText()">Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<script id="findings-data" type="application/json">
+{{FINDINGS_JSON}}
+</script>
+
+<script>
+  const RUN_ID = {{RUN_ID_JSON}};
+  const STORAGE_KEY = 'code-review-triage-' + RUN_ID;
+
+  const SEVERITIES = ['Critical', 'Major', 'Minor', 'Nitpick'];
+  const CATEGORIES = ['memory-usage', 'comments-verbosity', 'naming', 'architecture', 'dead-code', 'tests-missing', 'tests-unnecessary', 'adversarial-correctness', 'persistence', 'resilience', 'project-conventions'];
+  const STATUSES = ['pending', 'validated', 'invalidated', 'delayed'];
+  const QUESTION_FILTERS = [
+    { val: 'open', label: 'Open' },
+    { val: 'answered', label: 'Answered' },
+    { val: 'none', label: 'None' }
+  ];
+
+  let findings = JSON.parse(document.getElementById('findings-data').textContent);
+
+  function loadOverlay() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const overlay = JSON.parse(raw);
+      const byId = {};
+      overlay.forEach(f => byId[f.id] = f);
+      findings = findings.map(f => byId[f.id] ? Object.assign({}, f, byId[f.id]) : f);
+    } catch (e) { console.warn('Could not load saved triage state', e); }
+  }
+
+  function persist() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(findings));
+  }
+
+  function escapeHtml(str) {
+    if (str === undefined || str === null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  let activeSeverity = 'all';
+  let activeCategory = 'all';
+  let activeStatus = 'all';
+  let activeQuestion = 'all';
+
+  function questionState(f) {
+    const qs = f.questions || [];
+    if (!qs.length) return 'none';
+    return qs[qs.length - 1].role === 'user' ? 'open' : 'answered';
+  }
+
+  function buildFilterButtons() {
+    const sevHost = document.getElementById('severityFilters');
+    sevHost.innerHTML = '<button class="filter-btn active" data-val="all" onclick="setFilter(\'severity\',\'all\',this)">All</button>' +
+      SEVERITIES.map(s => `<button class="filter-btn" data-val="${s}" onclick="setFilter('severity','${s}',this)">${s}</button>`).join('');
+
+    const catHost = document.getElementById('categoryFilters');
+    catHost.innerHTML = '<button class="filter-btn active" data-val="all" onclick="setFilter(\'category\',\'all\',this)">All</button>' +
+      CATEGORIES.map(c => `<button class="filter-btn" data-val="${c}" onclick="setFilter('category','${c}',this)">${c}</button>`).join('');
+
+    const statHost = document.getElementById('statusFilters');
+    statHost.innerHTML = '<button class="filter-btn active" data-val="all" onclick="setFilter(\'status\',\'all\',this)">All</button>' +
+      STATUSES.map(s => `<button class="filter-btn" data-val="${s}" onclick="setFilter('status','${s}',this)">${s}</button>`).join('');
+
+    const qHost = document.getElementById('questionFilters');
+    qHost.innerHTML = '<button class="filter-btn active" data-val="all" onclick="setFilter(\'question\',\'all\',this)">All</button>' +
+      QUESTION_FILTERS.map(q => `<button class="filter-btn" data-val="${q.val}" onclick="setFilter('question','${q.val}',this)">${q.label}</button>`).join('');
+  }
+
+  function setFilter(kind, val, btn) {
+    if (kind === 'severity') activeSeverity = val;
+    if (kind === 'category') activeCategory = val;
+    if (kind === 'status') activeStatus = val;
+    if (kind === 'question') activeQuestion = val;
+    btn.parentElement.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const query = document.getElementById('searchInput').value.trim().toLowerCase();
+    let visibleCount = 0;
+    findings.forEach(f => {
+      const card = document.getElementById('card-' + f.id);
+      if (!card) return;
+      const sevMatch = activeSeverity === 'all' || f.severity === activeSeverity;
+      const catMatch = activeCategory === 'all' || f.category === activeCategory;
+      const statMatch = activeStatus === 'all' || f.status === activeStatus;
+      const qMatch = activeQuestion === 'all' || questionState(f) === activeQuestion;
+      const haystack = [f.title, f.description, (f.files || []).join(' ')].join(' ').toLowerCase();
+      const queryMatch = !query || haystack.includes(query);
+      const visible = sevMatch && catMatch && statMatch && qMatch && queryMatch;
+      card.style.display = visible ? '' : 'none';
+      if (visible) visibleCount++;
+    });
+    document.getElementById('emptyState').style.display = visibleCount === 0 ? '' : 'none';
+  }
+
+  function renderKPIs() {
+    const counts = { total: findings.length };
+    SEVERITIES.forEach(s => counts[s] = findings.filter(f => f.severity === s).length);
+    STATUSES.forEach(s => counts[s] = findings.filter(f => f.status === s).length);
+    const openQuestions = findings.filter(f => questionState(f) === 'open').length;
+    const host = document.getElementById('kpiGrid');
+    host.innerHTML = `
+      <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value">${counts.total}</div></div>
+      <div class="kpi-card critical"><div class="kpi-label">Critical</div><div class="kpi-value">${counts['Critical'] || 0}</div></div>
+      <div class="kpi-card major"><div class="kpi-label">Major</div><div class="kpi-value">${counts['Major'] || 0}</div></div>
+      <div class="kpi-card minor"><div class="kpi-label">Minor</div><div class="kpi-value">${counts['Minor'] || 0}</div></div>
+      <div class="kpi-card pending"><div class="kpi-label">Pending</div><div class="kpi-value">${counts['pending'] || 0}</div></div>
+      <div class="kpi-card validated"><div class="kpi-label">Validated</div><div class="kpi-value">${counts['validated'] || 0}</div></div>
+      <div class="kpi-card invalidated"><div class="kpi-label">Invalidated</div><div class="kpi-value">${counts['invalidated'] || 0}</div></div>
+      <div class="kpi-card delayed"><div class="kpi-label">Delayed</div><div class="kpi-value">${counts['delayed'] || 0}</div></div>
+      <div class="kpi-card" style="border-color: var(--question-open);"><div class="kpi-label">Open Questions</div><div class="kpi-value" style="color: var(--question-open);">${openQuestions}</div></div>
+    `;
+  }
+
+  function severityBadge(sev) {
+    const cls = { Critical: 'badge-critical', Major: 'badge-major', Minor: 'badge-minor', Nitpick: 'badge-nitpick' }[sev] || 'badge-nitpick';
+    return `<span class="badge ${cls}">${escapeHtml(sev)}</span>`;
+  }
+  function statusBadge(status) {
+    return `<span class="badge badge-status-${status}">${escapeHtml(status)}</span>`;
+  }
+
+  function questionBadge(f) {
+    const qs = f.questions || [];
+    if (!qs.length) return '';
+    const state = questionState(f);
+    const cls = state === 'open' ? 'badge-question-open' : 'badge-question-answered';
+    const label = state === 'open' ? `💬 ${qs.length} (awaiting reply)` : `💬 ${qs.length} answered`;
+    return `<span class="badge ${cls}">${label}</span>`;
+  }
+
+  function findingCardHTML(f) {
+    const filesList = (f.files || []).map(x => `<code>${escapeHtml(x)}</code>`).join(', ') || '—';
+    const introduced = f.introduced_by_mr ? `<div class="meta-item"><span class="meta-label">Introduced by MR</span><span class="meta-value">${escapeHtml(f.introduced_by_mr)}</span></div>` : '';
+    return `
+    <div class="finding-card status-${f.status}" id="card-${f.id}">
+      <div class="finding-header">
+        <div class="finding-title">
+          <span>${escapeHtml(f.id)}</span> — <span>${escapeHtml(f.title)}</span>
+        </div>
+        <div class="finding-header-badges">
+          ${severityBadge(f.severity)}
+          <span class="tag-category">${escapeHtml(f.category)}</span>
+          <span class="tag-confidence ${f.confidence === 'verified' ? 'verified' : (f.confidence === 'needs-confirmation' ? 'needs-confirmation' : 'opinion')}">${escapeHtml(f.confidence)}</span>
+          <span id="statusBadge-${f.id}">${statusBadge(f.status)}</span>
+          <span id="questionBadge-${f.id}">${questionBadge(f)}</span>
+        </div>
+      </div>
+      <div class="finding-body">
+        <div class="meta-grid">
+          <div class="meta-item"><span class="meta-label">Files</span><span class="meta-value">${filesList}</span></div>
+          <div class="meta-item"><span class="meta-label">Domain</span><span class="meta-value">${escapeHtml(f.domain)}</span></div>
+          ${introduced}
+        </div>
+
+        <div class="finding-section">
+          <h4>Description</h4>
+          <p>${escapeHtml(f.description)}</p>
+        </div>
+        <div class="finding-section">
+          <h4>Why it matters</h4>
+          <p>${escapeHtml(f.rationale)}</p>
+        </div>
+        <div class="finding-section">
+          <h4>Evidence</h4>
+          <pre>${escapeHtml(f.evidence)}</pre>
+        </div>
+        ${f.settle_with ? `<div class="finding-section">
+          <h4>Settle with</h4>
+          <pre>${escapeHtml(f.settle_with)}</pre>
+        </div>` : ''}
+
+        <div class="finding-section">
+          <h4>Comment to leave <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(editable)</span></h4>
+          <div class="editable-box">
+            <textarea class="edit-field" id="comment-${f.id}" oninput="onEdit('${f.id}', 'suggested_comment', this.value)">${escapeHtml(f.suggested_comment)}</textarea>
+            <div class="field-savemark" id="commentSaved-${f.id}">Saved</div>
+          </div>
+        </div>
+        <div class="finding-section">
+          <h4>Proposed action <span style="font-weight:400; text-transform:none; color:var(--text-muted);">(editable)</span></h4>
+          <div class="editable-box">
+            <textarea class="edit-field" id="action-${f.id}" oninput="onEdit('${f.id}', 'proposed_action', this.value)">${escapeHtml(f.proposed_action)}</textarea>
+            <div class="field-savemark" id="actionSaved-${f.id}">Saved</div>
+          </div>
+        </div>
+
+        <div class="triage-bar">
+          <button class="triage-btn validate ${f.status === 'validated' ? 'active' : ''}" onclick="setStatus('${f.id}', 'validated')">✓ Validate</button>
+          <button class="triage-btn invalidate ${f.status === 'invalidated' ? 'active' : ''}" onclick="setStatus('${f.id}', 'invalidated')">✕ Invalidate</button>
+          <button class="triage-btn delay ${f.status === 'delayed' ? 'active' : ''}" onclick="setStatus('${f.id}', 'delayed')">⏸ Delay</button>
+          <button class="triage-btn reset" onclick="setStatus('${f.id}', 'pending')">↺ Reset to pending</button>
+          <button class="triage-btn" onclick="copyActionPrompt('${f.id}')">📋 Copy Prompt</button>
+          <button class="triage-btn" onclick="focusQuestion('${f.id}')">💬 Ask a question</button>
+        </div>
+        <div class="note-field ${f.status === 'invalidated' || f.status === 'delayed' ? 'show' : ''}" id="noteField-${f.id}">
+          <textarea class="edit-field" style="min-height: 45px;" placeholder="Why? (optional note)" oninput="onEdit('${f.id}', 'reviewer_note', this.value)">${escapeHtml(f.reviewer_note || '')}</textarea>
+        </div>
+
+        <div class="finding-section" style="margin-top: 1.1rem;">
+          <h4>Questions <span id="qCount-${f.id}" style="font-weight:400; text-transform:none; color:var(--text-muted);">(${(f.questions || []).length})</span></h4>
+          <div class="thread" id="thread-${f.id}">${renderThread(f)}</div>
+          <div class="thread-compose">
+            <textarea class="edit-field" id="newQuestion-${f.id}" style="min-height: 45px;" placeholder="Ask a question or request a suggestion for this finding…"></textarea>
+            <div class="thread-compose-actions">
+              <button class="btn" onclick="addQuestion('${f.id}')">Add question</button>
+              <button class="btn" onclick="copyQuestionPrompt('${f.id}')">📋 Copy Prompt to Answer</button>
+            </div>
+          </div>
+          <details class="thread-reply-paste">
+            <summary>Paste an LLM's reply into the thread</summary>
+            <textarea class="edit-field" id="pasteReply-${f.id}" style="min-height: 45px;" placeholder="Paste the answer here…"></textarea>
+            <button class="btn" style="margin-top: 0.5rem;" onclick="addReply('${f.id}')">Add reply to thread</button>
+          </details>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function renderFindings() {
+    const host = document.getElementById('findingsContainer');
+    host.innerHTML = findings.map(findingCardHTML).join('');
+  }
+
+  function onEdit(id, field, value) {
+    const f = findings.find(x => x.id === id);
+    if (!f) return;
+    f[field] = value;
+    persist();
+    const markId = field === 'suggested_comment' ? 'commentSaved-' + id : (field === 'proposed_action' ? 'actionSaved-' + id : null);
+    if (markId) {
+      const mark = document.getElementById(markId);
+      if (mark) {
+        mark.classList.add('show');
+        clearTimeout(mark._t);
+        mark._t = setTimeout(() => mark.classList.remove('show'), 1200);
+      }
+    }
+  }
+
+  function setStatus(id, status) {
+    const f = findings.find(x => x.id === id);
+    if (!f) return;
+    f.status = status;
+    persist();
+    const card = document.getElementById('card-' + id);
+    card.className = 'finding-card status-' + status;
+    document.getElementById('statusBadge-' + id).innerHTML = statusBadge(status);
+    card.querySelectorAll('.triage-btn').forEach(b => b.classList.remove('active'));
+    if (status !== 'pending') {
+      const btn = card.querySelector('.triage-btn.' + (status === 'validated' ? 'validate' : status === 'invalidated' ? 'invalidate' : 'delay'));
+      if (btn) btn.classList.add('active');
+    }
+    const noteField = document.getElementById('noteField-' + id);
+    if (noteField) noteField.classList.toggle('show', status === 'invalidated' || status === 'delayed');
+    renderKPIs();
+    applyFilters();
+  }
+
+  function renderThread(f) {
+    const qs = f.questions || [];
+    if (!qs.length) return '<p class="thread-empty">No questions yet.</p>';
+    return qs.map(q => `
+      <div class="thread-msg ${q.role === 'user' ? 'user' : 'assistant'}">
+        <div class="thread-msg-role">${q.role === 'user' ? 'You' : 'Claude'}</div>
+        <div class="thread-msg-text">${escapeHtml(q.text)}</div>
+        <div class="thread-msg-time">${escapeHtml(q.timestamp || '')}</div>
+      </div>`).join('');
+  }
+
+  function refreshThread(id) {
+    const f = findings.find(x => x.id === id);
+    if (!f) return;
+    document.getElementById('thread-' + id).innerHTML = renderThread(f);
+    document.getElementById('qCount-' + id).textContent = '(' + (f.questions || []).length + ')';
+    document.getElementById('questionBadge-' + id).innerHTML = questionBadge(f);
+    renderKPIs();
+    applyFilters();
+  }
+
+  function addQuestion(id) {
+    const f = findings.find(x => x.id === id);
+    if (!f) return;
+    const ta = document.getElementById('newQuestion-' + id);
+    const text = ta.value.trim();
+    if (!text) return;
+    if (!f.questions) f.questions = [];
+    f.questions.push({ role: 'user', text: text, timestamp: new Date().toISOString() });
+    ta.value = '';
+    persist();
+    refreshThread(id);
+  }
+
+  function addReply(id) {
+    const f = findings.find(x => x.id === id);
+    if (!f) return;
+    const ta = document.getElementById('pasteReply-' + id);
+    const text = ta.value.trim();
+    if (!text) return;
+    if (!f.questions) f.questions = [];
+    f.questions.push({ role: 'assistant', text: text, timestamp: new Date().toISOString() });
+    ta.value = '';
+    persist();
+    refreshThread(id);
+  }
+
+  function focusQuestion(id) {
+    const ta = document.getElementById('newQuestion-' + id);
+    if (!ta) return;
+    ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ta.focus();
+  }
+
+  function buildActionPrompt(f) {
+    const lines = [];
+    lines.push(`Finding ${f.id} — ${f.title}`);
+    lines.push(`Category: ${f.category} | Severity: ${f.severity} | Confidence: ${f.confidence}`);
+    lines.push(`File(s): ${(f.files || []).join(', ')}`);
+    lines.push('');
+    lines.push('Description:');
+    lines.push(f.description);
+    lines.push('');
+    lines.push('Why it matters:');
+    lines.push(f.rationale);
+    lines.push('');
+    lines.push('Evidence:');
+    lines.push(f.evidence);
+    if (f.settle_with) {
+      lines.push('');
+      lines.push('Settle with (run this first to confirm or refute the finding):');
+      lines.push(f.settle_with);
+    }
+    lines.push('');
+    lines.push('Reviewer comment:');
+    lines.push(f.suggested_comment);
+    lines.push('');
+    lines.push('Proposed action:');
+    lines.push(f.proposed_action);
+    if (f.questions && f.questions.length) {
+      lines.push('');
+      lines.push('Prior discussion on this finding:');
+      f.questions.forEach(q => lines.push(`${q.role === 'user' ? 'Reviewer' : 'Assistant'}: ${q.text}`));
+    }
+    lines.push('');
+    lines.push('Please address this finding directly in the repository: apply the proposed action above (adjusting it if the code has changed since this review), or explain why it should not be applied. Summarize what you changed.');
+    return lines.join('\n');
+  }
+
+  function buildQuestionPrompt(f) {
+    const lines = [];
+    lines.push(`Finding ${f.id} — ${f.title}`);
+    lines.push(`Category: ${f.category} | Severity: ${f.severity} | Confidence: ${f.confidence}`);
+    lines.push(`File(s): ${(f.files || []).join(', ')}`);
+    lines.push('');
+    lines.push('Description:');
+    lines.push(f.description);
+    lines.push('');
+    lines.push('Evidence:');
+    lines.push(f.evidence);
+    if (f.settle_with) {
+      lines.push('');
+      lines.push('Settle with (run this first to confirm or refute the finding):');
+      lines.push(f.settle_with);
+    }
+    lines.push('');
+    lines.push('Reviewer comment:');
+    lines.push(f.suggested_comment);
+    lines.push('');
+    lines.push('Proposed action:');
+    lines.push(f.proposed_action);
+    lines.push('');
+    lines.push('Discussion so far:');
+    (f.questions || []).forEach(q => lines.push(`${q.role === 'user' ? 'Reviewer' : 'Assistant'}: ${q.text}`));
+    lines.push('');
+    lines.push("Please answer the reviewer's latest question above, using the actual code in the repository as needed. Be specific and reference file:line where relevant.");
+    return lines.join('\n');
+  }
+
+  function copyActionPrompt(id) {
+    const f = findings.find(x => x.id === id);
+    if (!f) return;
+    showPromptModal('Prompt to act on ' + f.id, buildActionPrompt(f));
+  }
+
+  function copyQuestionPrompt(id) {
+    const f = findings.find(x => x.id === id);
+    if (!f) return;
+    if (!f.questions || !f.questions.length) {
+      alert('Add a question first.');
+      return;
+    }
+    showPromptModal('Prompt to answer — ' + f.id, buildQuestionPrompt(f));
+  }
+
+  function showPromptModal(title, text) {
+    document.getElementById('promptModalTitle').textContent = title;
+    document.getElementById('promptModalCopiedMark').classList.remove('show');
+    const ta = document.getElementById('promptModalText');
+    ta.value = text;
+    document.getElementById('promptModalOverlay').classList.add('show');
+    ta.focus();
+    ta.select();
+  }
+
+  function closePromptModal() {
+    document.getElementById('promptModalOverlay').classList.remove('show');
+  }
+
+  function copyModalText() {
+    const ta = document.getElementById('promptModalText');
+    ta.select();
+    const mark = document.getElementById('promptModalCopiedMark');
+    const flash = () => {
+      mark.classList.add('show');
+      clearTimeout(mark._t);
+      mark._t = setTimeout(() => mark.classList.remove('show'), 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(flash).catch(() => {
+        try { document.execCommand('copy'); flash(); } catch (e) { /* user can still Ctrl+C the selected text */ }
+      });
+    } else {
+      try { document.execCommand('copy'); flash(); } catch (e) { /* user can still Ctrl+C the selected text */ }
+    }
+  }
+
+  function download(filename, text, mime) {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function exportTriageJSON() {
+    download('code-review-triage-' + RUN_ID + '.json', JSON.stringify(findings, null, 2), 'application/json');
+  }
+
+  function exportValidatedMarkdown() {
+    const validated = findings.filter(f => f.status === 'validated');
+    let md = `# Validated Code Review Comments — ${RUN_ID}\n\n`;
+    if (validated.length === 0) {
+      md += '_No findings validated yet._\n';
+    } else {
+      validated.forEach(f => {
+        md += `## ${f.id} — ${f.title}\n\n`;
+        md += `**Files:** ${(f.files || []).join(', ')}\n\n`;
+        md += `**Comment:**\n\n${f.suggested_comment}\n\n`;
+        md += `**Proposed action:** ${f.proposed_action}\n\n---\n\n`;
+      });
+    }
+    download('code-review-validated-' + RUN_ID + '.md', md, 'text/markdown');
+  }
+
+  function resetTriage() {
+    if (!confirm('Reset all triage decisions (status, edited comments, edited actions) for this report? This clears the saved local state.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    location.reload();
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    document.documentElement.setAttribute('data-theme', current === 'light' ? 'dark' : 'light');
+  }
+
+  loadOverlay();
+  buildFilterButtons();
+  renderKPIs();
+  renderFindings();
+  applyFilters();
+</script>
+
+</body>
+</html>

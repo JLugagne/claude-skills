@@ -8,6 +8,8 @@
 ## 2. Parameter Tampering & Business Constraints
 - [ ] **Tampering with Read-Only Business Fields**: Check if submitting additional fields in update requests allows modifying fields intended to be server-computed (e.g. `tier`, `discount_rate`, `reputation_score`, `verified_email: true`).
 - [ ] **Time & Date Manipulation**: In time-sensitive features (trial periods, discounts, expiration dates), verify timestamps are generated strictly from trusted server time, not derived from client requests or headers.
+- [ ] **Storage Without Quotas**: A size limit per file or document does not bound storage: check for a count or byte quota per tenant, or at least a metric on stored bytes per tenant. Combined with a missing rate limit, one caller can fill the storage and grow every index.
+- [ ] **Documented Isolation Guarantees**: For every isolation promise in the docs ("documents never cross apps", "a file is written only by the app that pushed it"), probe it as a caller who simply sends another value for the partitioning key.
 - [ ] **Usage Quota & Tier Limit Bypasses**: Test if rate limits, usage quotas (e.g. free tier max 5 projects), or storage caps can be bypassed by parallel requests or sub-resource creation.
 
 ## 3. Anti-Automation & Automated Abuse (API6:2023)

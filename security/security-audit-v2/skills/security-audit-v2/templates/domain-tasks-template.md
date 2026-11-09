@@ -74,7 +74,22 @@
 
 - [ ] **TASK-{{DOMAIN_SHORT}}-08**: Resource Limits & Denial of Service.
   - **Targets**: Request body readers, unbounded array allocations, query pagination.
-  - **Trace**: Are request body readers bounded (`io.LimitReader`)? Are pagination limits strictly capped?
+  - **Trace**: Are request body readers bounded (`io.LimitReader`)? Are pagination limits strictly capped, and does max page size × max item size fit the pod memory? Do non-streaming routes keep a deadline when streaming ones disable the timeout middleware? Are filter sizes bounded?
+  - **Status**: `[ ]`
+  - **Notes / Finding ID**: 
+
+---
+
+### Group 4: Identity Sources & Call Chain
+- [ ] **TASK-{{DOMAIN_SHORT}}-09**: Map where every identity attribute and scope selector of this domain comes from.
+  - **Targets**: Context/actor extraction, auth middleware, library helpers at the pinned version.
+  - **Trace**: Claim, header, URL segment, body or environment default? Does an empty claim fall back to a client header? Is any partitioning key (app, workspace, project) taken from the URL without being bound to the principal? Run `templates/checklists/identity-call-chain.md`.
+  - **Status**: `[ ]`
+  - **Notes / Finding ID**: 
+
+- [ ] **TASK-{{DOMAIN_SHORT}}-10**: Verify the trust claims (`00-trust-claims.md`) that concern this domain.
+  - **Targets**: Every `C-xx` naming a control this domain relies on (authentication, rate limit, isolation, header stripping).
+  - **Trace**: Is the control in the code or in the related repos? If it is only in the docs, file a `needs-confirmation` finding with a `settle_with` command.
   - **Status**: `[ ]`
   - **Notes / Finding ID**: 
 
@@ -83,7 +98,8 @@
 ## Sprint Completion Checklist
 - [ ] Every task above is marked either `[x]` (verified safe) or `[!]` (vulnerable).
 - [ ] For every `[!]` task, a structured finding object has been written to `findings.json`.
-- [ ] For every confirmed finding, a failing PoC test file has been verified and saved to `poc-tests/`.
+- [ ] For every confirmed finding, a failing PoC test file has been verified and saved to `poc-tests/`, built on the production middleware chain for identity and access findings.
+- [ ] Every finding names its `hop` and `call_chain_status`; every `needs-confirmation` one has a `settle_with` command.
 - [ ] A brief summary note has been written to `domain-notes.md` ending with:
   - `Coverage: <list of files and flows reviewed>`
   - `Not covered: <items outside budget or needing follow-up>`

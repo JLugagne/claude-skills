@@ -1,5 +1,5 @@
 ---
-description: White-box security audit skill for Claude Code with domain-driven subagent sprints, upfront scope negotiation, exhaustive vulnerability checklists, multi-agent scaling rules, and state-of-the-art HTML & Markdown reports.
+description: White-box security audit skill for Claude Code with domain-driven subagent sprints, upfront scope negotiation (including the gateway and deployment repos), exhaustive vulnerability checklists, an identity source map and hop-by-hop call-chain analysis, verification of the security claims the docs make, multi-agent scaling rules, and state-of-the-art HTML & Markdown reports.
 tags:
   - security
   - audit
@@ -32,6 +32,11 @@ To maximize signal and eliminate false positives, the audit operates under clear
   * Broken Object Level Authorization (BOLA / IDOR) on database entities and API paths.
   * Broken Function Level Authorization (BFLA) and horizontal/vertical privilege escalation.
   * Multi-tenancy isolation: enforcement of `tenant_id` filters across queries and shared cache namespaces.
+* **Identity Sources, Trust Boundaries & Call Chain (OWASP A01, A04, A05, A07)**:
+  * Identity source map: where tenant, user, team, role and scope selectors (app, workspace, project) come from — claim, header, URL, body or environment default — down to the library helpers at the pinned version.
+  * Claim-to-header fallbacks and environment defaults that let a caller pick their identity; scope selectors taken from the URL while the docs promise isolation.
+  * Hop-by-hop analysis of the edge proxy, gateway and forwarder: authentication, header stripping and rebuilding, rate limits, timeouts, body limits, compression and middleware library versions per hop; direct reachability that bypasses the gateway.
+  * Security claims in `CLAUDE.md`, README and docs ("the gateway rate-limits", "documents never cross apps") verified against the code; a false claim is a finding.
 * **Authentication & Session Management (OWASP A07, API2)**:
   * JWT flaws: algorithm confusion (`none`, HMAC with RSA public key), `kid` header injection, signature validation, expiration/revocation.
   * Session fixation, missing cookie security attributes (`HttpOnly`, `Secure`, `SameSite`), MFA/2FA ceremony bypasses, password reset host-header poisoning.
@@ -54,7 +59,8 @@ To maximize signal and eliminate false positives, the audit operates under clear
   * Server-Side Request Forgery (SSRF): loopback/private IP bypasses, Cloud Metadata access (AWS IMDSv1/v2, GCP, Azure), DNS rebinding.
   * Cross-Site Request Forgery (CSRF) and Cross-Origin Resource Sharing (CORS) misconfigurations.
   * SQL Injection (SQLi) and NoSQL Injection (MongoDB query operators).
-  * Cross-Site Scripting (XSS): Reflected, Stored, DOM-based, unescaped HTML/Markdown rendering.
+  * Cross-Site Scripting (XSS): Reflected, Stored, DOM-based, unescaped HTML/Markdown rendering, and active content (`text/html`, SVG) allowed in uploads and previewed by front ends.
+  * Caching and intermediaries: missing `Cache-Control` on authenticated responses, proxies whose rewritten headers no longer match the body (gzip with the uncompressed `Content-Length`).
   * Broken Object Property Level Authorization: Mass Assignment and Excessive Data Exposure.
   * Modern Protocols: GraphQL recursion/introspection DoS, gRPC auth interceptors, Cross-Site WebSocket Hijacking (CSWSH).
 * **Memory Safety, Low-Level Execution & Concurrency**:
@@ -63,7 +69,8 @@ To maximize signal and eliminate false positives, the audit operates under clear
   * Go `unsafe.Pointer` conversions, Cgo memory leaks/FFI boundaries, Rust `unsafe` blocks.
   * Concurrency data races on shared maps/slices (`go test -race`), goroutine leaks, and deadlocks.
 * **Application Denial of Service (AppDoS / DDoS) & Resource Exhaustion (OWASP A04, API4)**:
-  * HTTP server timeout configurations & Slowloris connection starvation (missing `ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`).
+  * HTTP server timeout configurations & Slowloris connection starvation (missing `ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`), timeout middleware disabled for a whole router because of streaming routes, and missing deadlines on every hop (proxy transports, database `statement_timeout`).
+  * Per-request memory (page size × item size) against the pod limit, per-row operators with attacker-sized operands, driver pool defaults derived from the node's CPU count, storage without quotas.
   * Missing or bypassable rate limiting on public and compute-heavy endpoints.
   * Asymmetric CPU amplification: unauthenticated expensive crypto operations, password hashing, image processing, or PDF rendering.
   * Database query amplification and N+1 cascade queries on public API endpoints.
@@ -115,12 +122,13 @@ To maximize signal and eliminate false positives, the audit operates under clear
 ## Architecture & How It Works
 
 ```
-Phase 0: Profiling & Upfront Interactive Scope Negotiation (00-scope.md, 00-profile.md)
+Phase 0: Profiling & Upfront Interactive Scope Negotiation
+   │      (00-scope.md, 00-profile.md with the identity source map, 00-trust-claims.md)
    │
 Phase 0.5: Domain Slicing, Scaling Rules & Backlog Generation (domains/<domain>/tasks.md)
    │
 Phase 1: Domain-Isolated Subagent Execution (wt-<domain>, failing PoC tests)
-   │     └── Phase 1.5: Composed-System & Inter-Domain Seam Agent (parallel)
+   │     └── Phase 1.5: Composed-System, Call-Chain & Claims Agents (parallel)
    │
 Phase 2: Multi-Stage Attack Chain Analysis (attack-chains.md)
    │
@@ -138,7 +146,9 @@ To maintain deep focus and prevent context exhaustion, Phase 0 profiles the code
 
 ### Burden of Proof: Failing PoC Tests
 
-A finding cannot be classified as confirmed based solely on static code analysis. Subagents must write a unit or integration test that **FAILS** while the vulnerability is present and **PASSES** once remediated (`fail-to-prove`).
+A finding cannot be classified as confirmed based solely on static code analysis. Subagents must write a unit or integration test that **FAILS** while the vulnerability is present and **PASSES** once remediated (`fail-to-prove`). Identity and access PoCs go through the production middleware chain, never a test harness that replaces it.
+
+When the flaw or its mitigation lives in another hop, the finding names its `hop`, records its `call_chain_status`, and carries a `settle_with` command: the one request that proves or refutes it against a deployed stack. Readers who check the wrong hop dismiss real findings as false alarms; the settle command makes them cheap to verify, and `summary.md` lists them under **Settle first**.
 
 ---
 
@@ -149,7 +159,8 @@ All deliverables are generated within `.security-audit/<YYYY-MM-DD-HHMM>/`:
 ```
 .security-audit/<run>/
 ├── 00-scope.md                # Agreed scope boundaries & noise exclusions
-├── 00-profile.md              # Project tech stack, entry points, and Git ref
+├── 00-profile.md              # Project tech stack, entry points, Git ref, identity source map
+├── 00-trust-claims.md         # Numbered security claims extracted from the docs, verified in Phase 1.5
 ├── domains/
 │   ├── auth/
 │   │   ├── domain-profile.md  # Domain boundaries & files in scope
@@ -164,7 +175,10 @@ All deliverables are generated within `.security-audit/<YYYY-MM-DD-HHMM>/`:
 │   └── traversal-filesystem/...
 ├── findings/
 │   ├── composed-system.json   # Inter-domain & seam findings
-│   └── composed-system.md
+│   ├── composed-system.md
+│   ├── call-chain.json        # Hop-level findings
+│   ├── call-chain.md          # Hop table: auth, headers, limits, timeouts, versions per hop
+│   └── claims.json            # Trust claims contradicted by the code
 ├── attack-chains.md           # Multi-finding attack chains narrative
 ├── attack-chains.html         # Dedicated interactive HTML report for attack chains
 ├── verification.md            # Adversarial PoC re-execution audit trail
@@ -189,12 +203,13 @@ Each finding in `findings.json` strictly conforms to `templates/finding-schema.j
   * `yes`: Reachable in default production deployment.
   * `only-if-configured`: Reachable only when a non-default configuration or environment flag is set.
   * `no`: Present only in development, testing, or mock surfaces.
+* **Hop & Call-Chain Status**: `hop` names where the flaw lives; `call_chain_status` is `unmitigated`, `mitigated-upstream` (only when read in the upstream code), `partially-mitigated`, `needs-confirmation` (requires `settle_with`) or `not-applicable`.
 
 ---
 
 ## Safety Rails
 
-PoC tests execute strictly against localhost, local test mocks, or isolated local test databases. They **never** interact with staging/production URLs, external third-party services, or perform destructive real-world actions.
+PoC tests execute strictly against localhost, local test mocks, or isolated local test databases. They **never** interact with staging/production URLs, external third-party services, or perform destructive real-world actions. Related repos (gateway, deployment) are read, never modified; `settle_with` commands are written for the user to run, never executed against a deployed stack by the audit.
 
 ---
 

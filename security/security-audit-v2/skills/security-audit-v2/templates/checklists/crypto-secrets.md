@@ -14,6 +14,8 @@
 
 ## 4. Sensitive Data Logging & Log Injection (A09:2021)
 - [ ] **Secrets & PII in Application Logs**: Audit logging statements. Verify that passwords, raw API keys, bearer tokens, credit card numbers, or personal identifiable information (PII) are redacted or filtered before logging.
+- [ ] **Business Data in URLs**: Query strings carrying business content (search filters, document fragments) end up in access logs, proxy logs and tracing tags (`http.url` set to the full URL). Check the log level each environment actually runs (the generated deployment config, not only the checked-in file) and whether filters can move to a request body.
+- [ ] **Credentials Echoed by Errors**: parse and connection errors that embed the input (`*url.Error` carries the full URL, password included; DSN parse errors; driver errors quoting the connection string) and reach logs or responses.
 - [ ] **Log Injection (CRLF)**: Verify that user-supplied input written to logs is sanitized of newline characters (`\r`, `\n`) to prevent log forging or injection of fake audit entries.
 
 ## 5. Hardcoded Secrets & Key Management (A02:2021)

@@ -18,7 +18,8 @@
     "impact",
     "poc_test_path",
     "remediation",
-    "production_reachable"
+    "production_reachable",
+    "call_chain_status"
   ],
   "properties": {
     "id": {
@@ -53,22 +54,38 @@
     },
     "severity": {
       "type": "string",
-      "enum": ["Critical", "High", "Medium", "Low", "Info"],
+      "enum": [
+        "Critical",
+        "High",
+        "Medium",
+        "Low",
+        "Info"
+      ],
       "description": "Severity rating derived from CVSS score"
     },
     "confidence": {
       "type": "string",
-      "enum": ["confirmed", "likely", "theoretical"],
+      "enum": [
+        "confirmed",
+        "likely",
+        "theoretical"
+      ],
       "description": "Confidence level based on proof of exploitability"
     },
     "reproducibility": {
       "type": "string",
-      "enum": ["confirmed-poc", "likely-trace", "theoretical-pattern"],
+      "enum": [
+        "confirmed-poc",
+        "likely-trace",
+        "theoretical-pattern"
+      ],
       "description": "Reproducibility state: confirmed-poc (tested & verified), likely-trace (code flow traced but env limited), theoretical-pattern (static analysis only)"
     },
     "files": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "List of affected files and line numbers (e.g. path/to/file.go:123)"
     },
     "description": {
@@ -84,11 +101,17 @@
       "description": "Attacker-controlled source -> transformation -> sensitive sink flow"
     },
     "poc_command": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Exact shell command to run the reproduction PoC test"
     },
     "poc_test_path": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Path to the reproduction test file relative to repo root"
     },
     "remediation": {
@@ -96,17 +119,71 @@
       "description": "Concrete code fix or configuration change for this specific stack"
     },
     "deployment_preconditions": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Configuration or deployment preconditions required for exploitability"
     },
     "requires_wiring": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "One-line configuration or wiring change that mitigates the issue"
     },
     "production_reachable": {
       "type": "string",
-      "enum": ["yes", "only-if-configured", "no"],
+      "enum": [
+        "yes",
+        "only-if-configured",
+        "no"
+      ],
       "description": "Whether reachable in default production deploy, only if configured, or dev surface only"
+    },
+    "hop": {
+      "type": "string",
+      "description": "Where the flaw lives: 'service' for the audited code, or the name of the hop in front of it (e.g. 'gateway', 'edge-proxy', 'forwarder'). Readers who check the wrong hop dismiss real findings."
+    },
+    "call_chain_status": {
+      "type": "string",
+      "enum": [
+        "not-applicable",
+        "unmitigated",
+        "mitigated-upstream",
+        "partially-mitigated",
+        "needs-confirmation"
+      ],
+      "description": "Whether the hops in front of the service mitigate the finding. mitigated-upstream only when the mitigation was read in the upstream code or configuration; a mitigation known only from documentation is needs-confirmation."
+    },
+    "settle_with": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Exact command or request that proves or refutes the finding in one run against a deployed stack (e.g. curl with a hand-set header). Required when call_chain_status is needs-confirmation."
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "call_chain_status": {
+            "const": "needs-confirmation"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "settle_with"
+        ],
+        "properties": {
+          "settle_with": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
 }

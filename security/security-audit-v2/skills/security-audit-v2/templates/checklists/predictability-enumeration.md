@@ -30,6 +30,7 @@
     - Secure: "Invalid email or password" or "If an account exists, instructions have been sent".
 - [ ] **HTTP Status Code Differentials**:
   - Check if endpoints return different HTTP status codes for existing vs non-existing users (e.g. `404 Not Found` vs `401 Unauthorized` or `200 OK` vs `400 Bad Request`).
+- [ ] **Refusal Order as an Oracle**: For every write route, compare answers for an unknown id, a foreign-tenant id, a trashed id and a visible id the caller lacks the role on, each with a valid and an invalid body. A body validated before the existence check answers `400` for all of them (no oracle, but a broken contract); an existence check before the role check must answer `404` identically for every invisible case.
 - [ ] **Timing-Based User Enumeration**:
   - Audit authentication and password verification functions.
   - If a user is not found in the database, does the function return immediately (e.g. 2ms), whereas a valid user triggers an expensive password hash check (Argon2/bcrypt taking 150–250ms)?

@@ -16,6 +16,7 @@
 - [ ] **Reflected & Stored XSS**: Check all web responses rendering user input into HTML, JavaScript contexts, or attribute contexts. Verify context-aware contextual escaping is applied.
 - [ ] **Markdown & Rich-Text Parsers**: If the application renders user-supplied Markdown or HTML, verify that an aggressive HTML sanitizer (e.g. DOMPurify, bluemonday) strips `<script>`, `<iframe>`, `javascript:`, `data:` URLs, and dangerous event handlers (`onerror`, `onload`).
 - [ ] **Client-Side Framework Vulnerabilities**: Check for `v-html` (Vue), `dangerouslySetInnerHTML` (React), or Angular bypasses of security trusts.
+- [ ] **Active Content in Stored Files**: Check which upload types are allowed by default (`text/html`, `image/svg+xml`, XML). `Content-Disposition: attachment` and `nosniff` stop direct navigation, but a front end that previews files (blob URL, iframe, `window.open`) runs the script in its own origin with the victim's session. Shared files reach every user of the share. Prefer refusing active types, or serving them as `application/octet-stream` with `Content-Security-Policy: sandbox; default-src 'none'`.
 
 ## 4. Cross-Site Request Forgery (CSRF) & CORS (A01:2021, API8:2023)
 - [ ] **CSRF Protection on State-Changing Actions**: Verify that cookie-authenticated state-changing endpoints (`POST`, `PUT`, `DELETE`, `PATCH`) require anti-CSRF tokens or enforce `SameSite=Strict`/`SameSite=Lax` cookies.
@@ -24,6 +25,11 @@
 ## 5. API Property Level Auth: Mass Assignment & Data Exposure (API3:2023)
 - [ ] **Mass Assignment / Parameter Binding**: Verify that incoming JSON or form payloads are deserialized into strict Data Transfer Objects (DTOs) with whitelisted fields, preventing attackers from overwriting internal properties (`is_admin`, `role`, `verified`, `balance`).
 - [ ] **Excessive Data Exposure**: Verify API responses return tailored view models/DTOs rather than dumping raw database entities that expose password hashes, internal IDs, MFA secrets, or PII.
+- [ ] **Internal Fields Reachable Through Filters and Sorts**: Check that filter, search and sort parameters only accept public keys; a filter matched against the raw stored object lets callers probe internal fields (storage keys, internal flags) the responses hide.
+
+## 7. Caching & Intermediaries (A05:2021)
+- [ ] **Cache Directives on Authenticated Responses**: Verify tenant-scoped and authenticated responses (JSON and file downloads) carry `Cache-Control: private, no-store`, so no shared cache between the service and clients can store and replay them.
+- [ ] **Intermediary Response Integrity**: For every proxy or middleware that rewrites responses (compression, header filtering), verify headers stay consistent with the body (e.g. `Content-Encoding: gzip` with the uncompressed `Content-Length` truncates or hangs every download). Check each hop separately; stripping `Accept-Encoding` on the forwarded request does not protect the client-facing hop.
 
 ## 6. Protocols: GraphQL, gRPC & WebSockets (API4, API8, API9:2023)
 - [ ] **GraphQL Introspection & Depth**: Verify introspection is disabled in production. Ensure query complexity/depth limiting and query timeouts prevent recursive DoS queries.

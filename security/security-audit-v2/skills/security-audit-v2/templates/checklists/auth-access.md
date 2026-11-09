@@ -5,8 +5,11 @@
 - [ ] **Missing Tenant/Organization Isolation**: Ensure every database query in multi-tenant models filters by `tenant_id` / `org_id` derived from the session context, never relying solely on user input.
 - [ ] **UUID / GUID Guessability vs Authz**: Even with unguessable UUIDs, verify explicit authorization checks exist on every retrieval, update, and deletion endpoint.
 - [ ] **Composite Key Bypasses**: Where entities use composite keys (e.g., `account_id` + `sub_id`), verify both keys are checked against session ownership.
+- [ ] **Sub-Scope Selectors From the Request**: Where data is partitioned below the tenant (app, workspace, project, client), verify the selector comes from an authenticated claim, not from a URL segment or body field that any caller of the tenant can change. Identity sources are covered in depth by `identity-call-chain.md`.
 
 ## 2. Broken Function Level Authorization (BFLA & Privilege Escalation - API5:2023, A01:2021)
+- [ ] **Exposure Inventory per Listener**: list every route each port serves, INCLUDING routes the framework or a shared server library registers by itself (`/metrics`, `/check`, `/health`, `/migrate`, `/errors`, `/debug/pprof`), with its auth status. Internal or operational routes must not answer on a public port; any body they read must be bounded. Prove it with a request through the real server constructor, not the handler alone.
+- [ ] **Fail-Closed Policy Hooks**: an authorizer, policy or permission hook that is nil or unset must refuse (or panic at construction), never allow.
 - [ ] **Role / Permission Checks on Sensitive Endpoints**: Check that administrative, backoffice, or higher-tier endpoints (`/admin/*`, `/internal/*`, `/api/billing/plan`) enforce strict role verification on the server.
 - [ ] **HTTP Method Flipping**: Check if switching HTTP methods (e.g. `GET` -> `POST`, `PUT`, `DELETE`, `OPTIONS`) bypasses authorization middleware.
 - [ ] **Parameter-based Role Switching**: Check if passing hidden or undocumented params (e.g., `?role=admin`, `?is_admin=true`, `?debug=1`) elevates privileges.
@@ -15,7 +18,8 @@
 ## 3. Token & Session Management Flaws (A07:2021, API2:2023)
 - [ ] **JWT Algorithm Confusion**: Verify that JWT verification rejects the `none` algorithm and verifies explicit expected algorithm (e.g., preventing HMAC verification with an RSA public key).
 - [ ] **JWT Key & Header Injection**: Check for `kid` (Key ID) header injection (directory traversal in `kid`, SQLi, or jku/x5u URL injection).
-- [ ] **Token Expiration & Revocation**: Check that tokens cannot be used after logout, password reset, or token revocation. Verify claims `exp`, `nbf`, and `iat` are validated.
+- [ ] **Token Expiration & Revocation**: Check that tokens cannot be used after logout, password reset, or token revocation. Verify claims `exp`, `nbf`, and `iat` are validated — including inside shared libraries, which sometimes parse a token without verifying its expiry and only log a warning.
+- [ ] **Empty Claims Filled From Headers**: Check whether identity helpers fall back to request headers or environment defaults when a claim is empty (see `identity-call-chain.md`).
 - [ ] **Session Fixation**: Verify that session identifiers (cookies or tokens) are regenerated upon login, privilege change, or password update.
 - [ ] **Cookie Security Flags**: Ensure cookies containing session tokens are set with `HttpOnly`, `Secure`, and `SameSite=Lax` or `SameSite=Strict`.
 

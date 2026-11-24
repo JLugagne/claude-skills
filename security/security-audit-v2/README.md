@@ -1,5 +1,5 @@
 ---
-description: White-box security audit skill for Claude Code with domain-driven subagent sprints, upfront scope negotiation (including the gateway and deployment repos), exhaustive vulnerability checklists, an identity source map and hop-by-hop call-chain analysis, verification of the security claims the docs make, multi-agent scaling rules, and state-of-the-art HTML & Markdown reports.
+description: White-box security audit skill for Claude Code with domain-driven subagent sprints, upfront scope negotiation (including the gateway and deployment repos), exhaustive vulnerability checklists, an identity source map and hop-by-hop call-chain analysis, verification of the security claims the docs make, multi-agent scaling rules with agents that delegate to their own subagents, and state-of-the-art HTML & Markdown reports.
 tags:
   - security
   - audit
@@ -37,9 +37,11 @@ To maximize signal and eliminate false positives, the audit operates under clear
   * Claim-to-header fallbacks and environment defaults that let a caller pick their identity; scope selectors taken from the URL while the docs promise isolation.
   * Hop-by-hop analysis of the edge proxy, gateway and forwarder: authentication, header stripping and rebuilding, rate limits, timeouts, body limits, compression and middleware library versions per hop; direct reachability that bypasses the gateway.
   * Security claims in `CLAUDE.md`, README and docs ("the gateway rate-limits", "documents never cross apps") verified against the code; a false claim is a finding.
+  * Identifiers crossing into a narrower namespace at another hop (a business id becoming a host label, a key matched case-insensitively): values accepted upstream that the router cannot address, or that it folds onto another one.
 * **Authentication & Session Management (OWASP A07, API2)**:
   * JWT flaws: algorithm confusion (`none`, HMAC with RSA public key), `kid` header injection, signature validation, expiration/revocation.
   * Session fixation, missing cookie security attributes (`HttpOnly`, `Secure`, `SameSite`), MFA/2FA ceremony bypasses, password reset host-header poisoning.
+  * Long-lived authorizations (WebSocket/SSE subscriptions, streams, cached grants) that outlive the access: a grant window closing on its own, or a revocation event lost by the broker, with no re-check; access decisions cached past a boundary that fell during the call.
 * **Path Traversal, Filesystem & File Uploads (OWASP A01, A03)**:
   * Directory traversal (`../`, URL-encoded, double-encoded, null-byte bypasses) in path resolution.
   * Zip Slip / Tar Slip archive extraction vulnerabilities.
@@ -60,7 +62,7 @@ To maximize signal and eliminate false positives, the audit operates under clear
   * Cross-Site Request Forgery (CSRF) and Cross-Origin Resource Sharing (CORS) misconfigurations.
   * SQL Injection (SQLi) and NoSQL Injection (MongoDB query operators).
   * Cross-Site Scripting (XSS): Reflected, Stored, DOM-based, unescaped HTML/Markdown rendering, and active content (`text/html`, SVG) allowed in uploads and previewed by front ends.
-  * Caching and intermediaries: missing `Cache-Control` on authenticated responses, proxies whose rewritten headers no longer match the body (gzip with the uncompressed `Content-Length`).
+  * Caching and intermediaries: missing `Cache-Control` on authenticated responses, proxies whose rewritten headers no longer match the body (gzip with the uncompressed `Content-Length`, an emptied 304/416 body relayed with the upstream `Content-Length`).
   * Broken Object Property Level Authorization: Mass Assignment and Excessive Data Exposure.
   * Modern Protocols: GraphQL recursion/introspection DoS, gRPC auth interceptors, Cross-Site WebSocket Hijacking (CSWSH).
 * **Memory Safety, Low-Level Execution & Concurrency**:
@@ -78,6 +80,7 @@ To maximize signal and eliminate false positives, the audit operates under clear
   * Unbounded request body reads (`io.ReadAll` without `io.LimitReader`).
   * Decompression bombs (Zip bombs, XML Billion Laughs).
   * Unbounded database queries and uncapped pagination parameters.
+  * Storage growth through cleanup that only a later write triggers, input bounds applied to generated output (a valid resource that can no longer be downloaded), and encoded keys longer than their column (a valid write that fails on every retry).
   * Regular Expression Denial of Service (ReDoS) on user input.
 * **Predictability, Guessability & Account Enumeration (CWE-330, CWE-340, CWE-200)**:
   * Sequential auto-increment database IDs (`/users/123`, `/invoices/4500`) leaking business metrics and enabling trivial scraping.
@@ -128,6 +131,7 @@ Phase 0: Profiling & Upfront Interactive Scope Negotiation
 Phase 0.5: Domain Slicing, Scaling Rules & Backlog Generation (domains/<domain>/tasks.md)
    │
 Phase 1: Domain-Isolated Subagent Execution (wt-<domain>, failing PoC tests)
+   │     │    each agent may spawn up to 3 children (sweep, PoC writing, refutation)
    │     └── Phase 1.5: Composed-System, Call-Chain & Claims Agents (parallel)
    │
 Phase 2: Multi-Stage Attack Chain Analysis (attack-chains.md)
@@ -143,6 +147,8 @@ To maintain deep focus and prevent context exhaustion, Phase 0 profiles the code
 * If a domain exceeds **> 20 source files**, **> 5,000 LOC**, or **> 10 checklist tasks**, it is automatically partitioned into disjoint sub-domains (e.g., `auth-tokens` and `auth-rbac`).
 * File ownership between subagents is strictly disjoint: no two agents inspect the same files.
 * Each subagent operates within its own dedicated git worktree (`wt-<domain>`) and executes its assigned `tasks.md` sprint backlog.
+* Domain and Phase 1.5 agents are dispatched as `general-purpose` agents (never `Explore`, which can neither write nor delegate), with a model picked per agent (`opus` for auth, call chain, composed system, claims and attack chains; `sonnet` for pattern-tracing domains).
+* Claude Code lets a subagent spawn its own (up to three layers below the main conversation by default, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`): each agent may run up to 3 children at once for the sibling sweep, for writing and running a PoC, or for an independent refutation of a candidate finding (given the code, never the conclusion). Children get an explicit context, write to `domains/<domain>/sub/` and PoC files, never to `findings.json`, and do not delegate further.
 
 ### Burden of Proof: Failing PoC Tests
 
@@ -166,7 +172,8 @@ All deliverables are generated within `.security-audit/<YYYY-MM-DD-HHMM>/`:
 │   │   ├── domain-profile.md  # Domain boundaries & files in scope
 │   │   ├── tasks.md           # Sprint checklist backlog
 │   │   ├── findings.json      # Structured findings (schema-validated)
-│   │   └── notes.md           # Domain audit notes & coverage
+│   │   ├── notes.md           # Domain audit notes, coverage, refuted candidates
+│   │   └── sub/               # Reports of the agent's own subagents
 │   ├── payment/
 │   │   ├── domain-profile.md
 │   │   ├── tasks.md

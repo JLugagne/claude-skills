@@ -1,5 +1,5 @@
 ---
-description: Adversarial, non-security code review skill for Claude Code — upfront scope negotiation (full project vs. MR/diff only, related repos), eleven quality-dimension checklists (memory usage, comment verbosity, naming, architecture, dead code, missing tests, unnecessary tests, adversarial correctness, persistence, resilience, project conventions), cross-cutting passes on docs, test harness fidelity and query cost, optional runtime verification on a disposable database, isolated git worktrees, and an interactive HTML triage report where every finding can be validated, invalidated, delayed, and edited in place.
+description: Adversarial, non-security code review skill for Claude Code — upfront scope negotiation (full project vs. MR/diff only, related repos), eleven quality-dimension checklists (memory usage, comment verbosity, naming, architecture, dead code, missing tests, unnecessary tests, adversarial correctness, persistence, resilience, project conventions), a standalone build and mergeability check, cross-cutting passes on docs, test harness fidelity, query cost, limits across components and lifecycles that end without an event, review agents that delegate to their own subagents, optional runtime verification on a disposable database, isolated git worktrees, and an interactive HTML triage report where every finding can be validated, invalidated, delayed, and edited in place.
 tags:
   - code-review
   - code-quality
@@ -32,23 +32,27 @@ mode — thoroughness is the only mode.
 
 Eleven quality dimensions, each with its own checklist under `skills/code-review-v2/templates/checklists/`:
 
-* **Memory Usage** — unbounded growth, missing resource cleanup, inefficient allocations, retained references, goroutine/object lifetime mismatches.
+* **Memory Usage** — unbounded growth, missing resource cleanup, inefficient allocations, retained references, goroutine/object lifetime mismatches, deferred cleanup that only a later write would trigger.
 * **Comment Verbosity** — filler comments that restate the code (a common AI-generated-code smell), narration instead of clear naming, stale/commented-out code, and the opposite failure — missing WHY on genuinely non-obvious code.
 * **Naming Logic** — ambiguous or misleading names, inconsistent terminology for the same concept, convention drift, generic package/interface names.
 * **Architecture** — layering violations, leaky abstractions, god objects, shallow modules, premature abstraction, inconsistent error-handling strategy, pattern drift.
 * **Dead Code** — unused symbols, unreachable branches, orphaned feature flags, duplicate implementations — every finding backed by a reference-search command and its empty result.
 * **Missing Tests** — untested critical logic, error paths, boundaries, concurrency, regressions without a matching test.
 * **Unnecessary Tests** — mock-only assertions, tautological tests, duplicate coverage, implementation-coupled tests, flaky-by-design tests, tests-for-the-framework.
-* **Adversarial Correctness** — a general refute-first pass: nil/zero-value handling, boundary conditions, swallowed errors, unsynchronized shared state, assumed idempotency, contract mismatches, the order in which refusals are checked (a body validated before the resource is loaded turns a `403`/`404`/`412` into a `400`), and compensations that assume a failed commit rolled back.
-* **Persistence** — query cost per call (pages that enumerate the whole set because the cursor and `LIMIT` sit outside a `UNION`), index fit, unused or overly broad indexes, updates rewriting large columns, ambiguous commits, rollbacks on cancelled contexts, pool and migration settings, unbounded tables.
-* **Resilience** — deadlines on every hop, bounds on user input, per-request memory against the container limit, proxy and header assumptions (compression and `Content-Length`, cache directives), configuration defaults defined twice.
+* **Adversarial Correctness** — a general refute-first pass: nil/zero-value handling, boundary conditions, swallowed errors, unsynchronized shared state, assumed idempotency, contract mismatches, the order in which refusals are checked (a body validated before the resource is loaded turns a `403`/`404`/`412` into a `400`), compensations that assume a failed commit rolled back, bounds checked on a normalised form while the raw one is kept, encoded worst cases against every bound, input limits applied to generated output, identifiers that a narrower namespace downstream cannot hold, decisions cached across their own validity boundary, and re-checks that only an event triggers.
+* **Persistence** — query cost per call (pages that enumerate the whole set because the cursor and `LIMIT` sit outside a `UNION`), key and column sizes against the longest encoded value per backend, index fit, unused or overly broad indexes, updates rewriting large columns, ambiguous commits, rollbacks on cancelled contexts, pool and migration settings, unbounded tables.
+* **Resilience** — deadlines on every hop, bounds on user input, per-request memory against the container limit, proxy and header assumptions (compression and `Content-Length`, a body dropped with its `Content-Length` kept, conditional headers decided before the ETag is known, cache directives), configuration defaults defined twice, builds that only work next to sibling checkouts.
 * **Project Conventions** — every rule the project wrote down (`CLAUDE.md` at every level, `AGENTS.md`, `CONTRIBUTING.md`, linter configs) extracted into `00-project-rules.md` and checked file by file, old code included; instruction files contradicted by the code are findings too.
 
 Beyond the per-unit checklists, cross-cutting passes look at the composed system: **architecture**,
 **claims vs. code** (every statement the docs make about call chains, security controls, limits and
 status codes), **harness fidelity** (what the e2e setup and the real-instance tools replace compared
-with production, and which observable behaviors no tool checks), and a **persistence** matrix of every
-query, index and write statement. When allowed, a runtime step applies the migrations to a disposable
+with production, and which observable behaviors no tool checks), a **persistence** matrix of every
+query, index and write statement, a **limits** matrix (every bound across the reviewed and sibling
+repos against the worst value that reaches it, and every identifier crossing into a narrower namespace),
+and a **lifecycle** pass (every state that outlives a request and the trigger that ends it when no
+event comes). Before any of it, the reviewed ref is built in a worktree with no sibling checkout next to
+it and merged against its target with `git merge-tree`. When allowed, a runtime step applies the migrations to a disposable
 database, seeds realistic volumes and attaches `EXPLAIN` plans to the findings.
 
 Every finding requires evidence proportional to its claim — a dead-code claim needs the exact
@@ -64,10 +68,13 @@ with on sight.
 Phase 0: Scope Negotiation (00-scope.md, 00-profile.md, 00-project-rules.md)
    │      Full Project vs. MR/Diff Only, related repos, disposable containers allowed?
    │
+Phase 0, step 7: Standalone build & mergeability (isolated worktree, git merge-tree)
+   │
 Phase 0.5: Domain/Diff Slicing & Backlog Generation (units/<unit>/tasks.md)
    │
 Phase 1: Isolated Subagent Execution (wt-<unit>, evidence-backed findings)
-   │     ├── Phase 1.5: Cross-Cutting Passes (architecture, claims, harness, persistence)
+   │     │    each agent may spawn up to 3 children (sweep, refutation, probes)
+   │     ├── Phase 1.5: Cross-Cutting Passes (architecture, claims, harness, persistence, limits, lifecycle)
    │     └── Phase 1.6: Runtime Verification (optional: migrations + seeded data + EXPLAIN)
    │
 Phase 2: Consolidation & Interactive Triage Report Generation (comments.json, report.html)
@@ -83,6 +90,15 @@ in-scope dimension's checklist against its own slice.
 parallel (deeper focus than splitting a small diff by domain). Large diffs (>20 changed files or
 >2,000 changed LOC) are split by directory/package. Every finding records `introduced_by_mr`
 (`yes`/`no`/`unknown`) so the user can tell what the MR actually caused versus what it merely touched.
+
+**Nested subagents**: unit and pass agents are dispatched as `general-purpose` agents (never
+`Explore`, which can neither write nor delegate), with a model picked per dimension (`sonnet` for the
+mechanical ones, `opus` for correctness, architecture, persistence, resilience and the cross-cutting
+passes). Claude Code lets a subagent spawn its own (up to three layers below the main conversation by
+default, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`), so each agent may run up to 3 children at once: one per
+package or sibling repo for a sibling sweep, an independent refutation of a candidate finding (given the
+code, never the conclusion), or a long probe. Children get an explicit context, write to
+`units/<unit>/sub/`, never to `findings.json`, and do not delegate further.
 
 ### The Interactive Triage Report
 
@@ -119,12 +135,15 @@ All deliverables are generated within `.code-review/<YYYY-MM-DD-HHMM>/`:
 │   │   ├── unit-profile.md     # Boundaries & files in scope
 │   │   ├── tasks.md            # Sprint checklist backlog (all in-scope dimensions)
 │   │   ├── findings.json       # Structured findings (schema-validated)
-│   │   └── notes.md            # Coverage notes
+│   │   ├── notes.md            # Coverage notes, refuted candidates
+│   │   └── sub/                # Reports of the agent's own subagents
 ├── findings/
 │   ├── architecture.json        # Cross-cutting passes (Phase 1.5)
 │   ├── claims.json
 │   ├── harness.json
-│   └── persistence.json
+│   ├── persistence.json
+│   ├── limits.json
+│   └── lifecycle.json
 ├── comments.json                # Consolidated findings, status: "pending", ready for triage
 ├── report.html                  # Interactive triage report
 ├── full-report.md               # Complete Markdown report

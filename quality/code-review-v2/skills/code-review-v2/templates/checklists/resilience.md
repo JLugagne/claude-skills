@@ -44,6 +44,15 @@ the command that would settle it.
   Example: a gzip middleware that keeps the upstream `Content-Length` truncates every compressed
   response, and stripping `Accept-Encoding` on the forwarded request does not protect the client-facing
   hop. Verify each hop separately.
+- [ ] **Body removed, framing headers kept**: an adapter, client or proxy that drops or replaces the body
+  (HEAD, 304, 416, an error turned into an empty body, a decoded stream) must also drop
+  `Content-Length` (and `Content-Encoding` when it decodes). Relayed as-is, the answer looks truncated
+  to the next hop.
+- [ ] **Conditional requests decided before the validator is known**: `If-Range`, `If-None-Match` and
+  `If-Match` compared with an ETag that is empty or computed before the resource is resolved. A
+  matching validator is then treated as stale: the Range is ignored (200 instead of 206), no 304. Check
+  what every route passes to the shared helper; the sibling sweep covers all of them (one review named
+  the feed route; the reader and admin file routes had the same bug).
 - [ ] **Missing cache directives** on authenticated or tenant-scoped responses
   (`Cache-Control: private, no-store`).
 - [ ] **Streaming routes** (uploads, downloads) without a size limit, an interruption metric, or cleanup
@@ -56,6 +65,11 @@ the command that would settle it.
 - [ ] **Configuration accepted without validation**: unknown keys (typos) silently ignored, negative or
   inconsistent values (a budget below the per-item maximum, a write timeout shorter than the read
   timeout) replaced by defaults or accepted; the shipped config tree never loaded by any test.
+- [ ] **Build tied to the developer's machine**: a committed `go.work` (or npm/yarn workspace, Cargo
+  `[patch]`, Gradle composite build) or a `replace`/path dependency pointing to a sibling directory
+  outside the repo. CI and any isolated checkout fail before compiling. Prove it by building a clean
+  worktree that has no sibling checkouts next to it; the proposed action names the module to publish and
+  tag, and the version to pin instead.
 - [ ] **Dev settings in the shipped artifact**: emulator endpoints, local buckets or credentials in the
   default config copied into the image; dev compose files publishing unauthenticated services on all
   interfaces instead of loopback.

@@ -1,7 +1,7 @@
 ---
 name: code-review-v2
 description: Perform a rigorous, adversarial non-security code review of a codebase — upfront scope negotiation (full project vs. MR/diff only, related repos), quality-dimension checklists (memory usage, comment verbosity, naming, architecture, dead code, missing tests, unnecessary tests, adversarial correctness, persistence, resilience, project conventions), cross-cutting passes on docs, test harness fidelity and query cost, optional runtime verification on a disposable database, isolated git worktrees, and an interactive HTML triage report where every finding can be validated, invalidated, delayed, and have its comment text and proposed action edited.
-allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git blame:*), Bash(git merge-base:*), Bash(git for-each-ref:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git ls-files:*), Bash(git ls-tree:*), Bash(git cat-file:*), Bash(git grep:*), Bash(git describe:*), Bash(git shortlog:*), Bash(git branch --list:*), Bash(git branch --show-current), Bash(git branch -a:*), Bash(git branch -r:*), Bash(git remote -v), Bash(git remote show:*), Bash(git config --get:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git worktree add:*), Bash(git worktree list:*), Bash(git worktree remove:*), Bash(git worktree prune:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(glab mr list:*), Bash(glab mr view:*), Bash(glab mr diff:*)
+allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git blame:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git for-each-ref:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git ls-files:*), Bash(git ls-tree:*), Bash(git cat-file:*), Bash(git grep:*), Bash(git describe:*), Bash(git shortlog:*), Bash(git branch --list:*), Bash(git branch --show-current), Bash(git branch -a:*), Bash(git branch -r:*), Bash(git remote -v), Bash(git remote show:*), Bash(git config --get:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git worktree add:*), Bash(git worktree list:*), Bash(git worktree remove:*), Bash(git worktree prune:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(glab mr list:*), Bash(glab mr view:*), Bash(glab mr diff:*)
 author: JLugagne
 ---
 
@@ -41,6 +41,12 @@ behind the MR branch and re-filed findings already fixed there, (2) items the te
 filed again every round, and (3) each run filed one instance of a defect class, so the next run found
 its siblings (text validation, then bidi, then another constructor; one timeout, then another listener).
 Phase 0 step 6, the sibling sweep and the Phase 2 grouping rule below exist to prevent each of these.
+A later case: a second reviewer found classes no dimension was looking for, across three repos: a title
+bounded after trimming but stored raw (a cursor its own decoder refused), escaped keys longer than their
+Spanner column, an upload limit applied to a merged manifest, identifiers one service accepts that the
+next one cannot route, a cleanup and an access re-check that waited for an event that never comes, and
+a branch that only built next to its sibling checkouts. Phase 0 step 7 and the Phase 1.5 limits and
+lifecycle passes exist for these.
 
 ---
 
@@ -87,6 +93,14 @@ Phase 0 step 6, the sibling sweep and the Phase 2 grouping rule below exist to p
      findings the user invalidated or delayed, with their `reviewer_note`, are decisions too. Tag every
      new finding `round: new | repeat | regression` (repeat = filed before and still present). A run made
      mostly of repeats means the fixes are not landing: say so at the top of `summary.md`.
+
+7. **Standalone build and mergeability** (results in `00-profile.md`; failures filed under `resilience`
+   and listed first in `summary.md`):
+   - Build and run the unit tests in a worktree of the reviewed ref created where no sibling checkout
+     sits next to it (`git worktree add "$(mktemp -d)/wt" HEAD`). A committed `go.work`, a path
+     `replace`, a workspace entry pointing to `../<repo>` fail there as they will in CI.
+   - `git merge-tree --write-tree --name-only <target> HEAD`: list the files that conflict with the
+     target branch. A branch that cannot merge is the first line of `summary.md`.
 
 ### 2. Mandatory Scope Question
 **MANDATORY STEP**: Before dispatching any subagent, ask the user:
@@ -191,7 +205,13 @@ git worktree add .code-review/<run>/wt-mr <head-ref>         # MR/diff scope, sh
 
 ## Phase 1 — Isolated Subagent Execution (Sprint Tracks)
 
-Dispatch one subagent per unit, operating strictly inside its worktree.
+Dispatch one subagent per unit, operating strictly inside its worktree. Dispatch every unit and pass
+agent with `subagent_type: general-purpose` (or a custom agent whose `tools` list `Agent` and `Write`):
+never `Explore`, which can neither write its findings nor delegate. Pick the model per agent rather than
+inheriting one for all: `sonnet` for the mechanical dimensions (`dead-code`, `naming`,
+`comments-verbosity`, `tests-unnecessary`, `project-conventions`), `opus` for `adversarial-correctness`,
+`architecture`, `persistence`, `resilience` and the Phase 1.5 passes. Run at most the number of agents
+in parallel the user's instructions allow (ask in Phase 0 when they say nothing).
 
 ### Subagent Rules of Engagement
 1. **Adversarial by default**: assume every function, comment, and test is guilty until you've actually
@@ -230,9 +250,24 @@ Dispatch one subagent per unit, operating strictly inside its worktree.
    siblings outside the diff are listed with `introduced_by_mr: "no"` rather than dropped when the same
    fix covers them.
 8. **Read the decisions**: every agent receives `00-decisions.md` and never files a settled item.
-9. **A zero is evidence, not a skip**: when a dimension yields no finding for a unit, `notes.md` lists
+9. **Delegate inside your unit when it pays.** Claude Code lets a subagent spawn its own subagents (up to
+   three layers below the main conversation by default, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`). A unit
+   or pass agent spawns children for:
+   - a sibling sweep over a large scope: one child per package or sibling repo, each returning the list
+     of sites with `file:line`;
+   - an independent refutation of a candidate finding: give the child the code, the input and the
+     claimed outcome, never your conclusion, and ask it to prove the code right (a failing test or a
+     trace). File only what survives; record refuted candidates in `notes.md`;
+   - a long probe: a test against a disposable container, a fuzz run, a worst-case size computation
+     across repos.
+   Rules: at most 3 children running at once per agent; the model per child (`haiku` for searches and
+   listings, `sonnet` for tracing and test writing, `opus` only for concurrency, protocol or cross-hop
+   reasoning); a child sees nothing but its prompt, so pass the worktree path, the files, the scope and
+   the `D-xx` decisions that apply; children write `units/<unit>/sub/<child>.md` and never
+   `findings.json`, which only the unit agent writes; children do not delegate further.
+10. **A zero is evidence, not a skip**: when a dimension yields no finding for a unit, `notes.md` lists
    the checklist items actually traced and how (search, read, plan).
-10. **Output Requirements**:
+11. **Output Requirements**:
    - Update `tasks.md` with status (`[x]` clean, `[!]` finding filed).
    - Write structured findings to `units/<unit>/findings.json`, schema-validated against
      `templates/finding-schema.json`. Every finding MUST include a `suggested_comment` (the exact text
@@ -274,6 +309,21 @@ its own worktree, each writing `findings/<pass>.json` with the same schema and `
    the index it relies on, every index with the queries that use it, and every write statement with
    the columns it rewrites. Unused indexes, unindexed hot paths, pages that enumerate the full set, and
    unbounded tables surface from this matrix, not from reading one file.
+
+5. **Limits and identifiers** (`wt-limits`): one matrix across the reviewed repo and the sibling repos
+   in scope. Rows: every bound (length and size constants, column and key sizes per backend, decoder
+   limits, header and URL bounds, DNS label rules, the limits of the platforms). Columns: every value
+   that reaches it, with the normalisation checked (trim, fold) versus the form kept, the encodings on
+   the way and the computed worst case. Add one row per identifier that crosses a service into a
+   narrower namespace (a business id becoming a host label). Every row whose worst case exceeds its
+   bound, or whose producer rule is wider than the consumer's, is a finding; the proposed action
+   includes the test that ties both sides.
+6. **Lifecycle without events** (`wt-lifecycle`): list every state that outlives a request
+   (subscriptions, streams, caches of decisions with validity windows, leases, grace periods, deferred
+   cleanup, retries) and, for each, every way it should end and the trigger that ends it: an event, a
+   timer, a sweep, the next write. A way that has no trigger independent of an event or of the next
+   write (a window closing, an event lost, no further write) is a finding, with the longest time the
+   state survives it.
 
 ---
 
@@ -333,7 +383,7 @@ When Phase 0 allowed disposable containers and the project ships migrations:
 
 ## Phase 3 — Cleanup
 
-Remove every git worktree created in Phase 0.5/1.5 (`git worktree remove`) and every container started
+Remove every git worktree created in Phase 0 (the standalone build), 0.5 and 1.5 (`git worktree remove`) and every container started
 in Phase 1.6. Never leave a stray worktree or container behind.
 
 ---

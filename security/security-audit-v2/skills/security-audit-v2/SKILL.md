@@ -148,6 +148,11 @@ git worktree add .security-audit/<run>/wt-<domain> HEAD
 ## Phase 1 — Domain-Isolated Subagent Execution (Sprint Tracks)
 
 Dispatch one subagent per domain (or sub-domain), operating strictly inside its worktree `wt-<domain>`.
+Dispatch every domain and Phase 1.5 agent with `subagent_type: general-purpose` (or a custom agent whose
+`tools` list `Agent` and `Write`): never `Explore`, which can neither write PoCs and findings nor
+delegate. Pick the model per agent: `opus` for `auth`, call chain, composed system, claims and attack
+chains; `sonnet` for domains whose checklists are mostly pattern tracing. Run at most the number of
+agents in parallel the user's instructions allow.
 
 ### Subagent Rules of Engagement
 1. **Work Strictly Within Your Domain**: Focus exclusively on the files assigned in `domain-profile.md`. Do not audit code owned by other domain agents.
@@ -173,7 +178,21 @@ Dispatch one subagent per domain (or sub-domain), operating strictly inside its 
    every route the framework registers by itself. List every site with its reachability; the
    remediation fixes the class. A finding filed with one example is re-opened by the next round.
 5. **Read the decisions**: every agent receives `00-decisions.md` and never files a settled item.
-6. **Output Requirements**:
+6. **Delegate inside your domain when it pays.** Claude Code lets a subagent spawn its own subagents (up
+   to three layers below the main conversation by default, `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH`). A
+   domain or Phase 1.5 agent spawns children for:
+   - the sibling sweep: one child per package, listener or sibling repo, each returning the sites with
+     their reachability;
+   - writing and running a PoC test while the agent keeps tracing;
+   - an independent refutation of a candidate finding: give the child the code, the input and the
+     claimed impact, never your conclusion, and ask it to prove the code safe. File only what survives;
+     record refuted candidates in `notes.md`.
+   Rules: at most 3 children running at once per agent; the model per child (`haiku` for searches and
+   listings, `sonnet` for PoC writing and tracing, `opus` for authorization, concurrency and cross-hop
+   reasoning); a child sees nothing but its prompt, so pass the worktree path, the files, `00-scope.md`
+   and the `D-xx` that apply; children write `domains/<domain>/sub/<child>.md` and PoC files, never
+   `findings.json`, which only the domain agent writes; children do not delegate further.
+7. **Output Requirements**:
    - Update `tasks.md` with status (`[x]` or `[!]`).
    - Write structured findings to `domains/<domain>/findings.json` complying with `templates/finding-schema.json`.
    - Write a human-readable note in `domains/<domain>/notes.md` ending with:
@@ -190,6 +209,10 @@ Dispatch these agents in parallel, each in its own worktree:
    - Test end-to-end nominal flows across domain seams (e.g. `signup -> login -> payment checkout -> webhook callback -> data access`).
    - Check for cross-domain inconsistencies (e.g. domain A validates tenant ID differently than domain B).
    - Walk flows with real HTTP client / cookie jar, testing session lifecycles, state transitions, and step-skipping.
+   - Access that ends without an event: for every long-lived authorization (WebSocket or SSE
+     subscription, stream, cached access decision, lease), list how it ends (revocation event, a grant
+     window closing on its own, an event lost by the broker, token expiry) and the trigger that catches
+     each. A way with no trigger is a finding, with the data still delivered and for how long.
    - Output: `findings/composed-system.json` and `findings/composed-system.md`.
 2. **Call chain** (`wt-call-chain`) — audit each hop between the client and the service, reading the
    related repos agreed in Phase 0 (read-only):
@@ -198,6 +221,9 @@ Dispatch these agents in parallel, each in its own worktree:
      timeouts, body limits, compression, and the versions of shared middleware libraries.
    - Check direct reachability that bypasses the gateway (network policies, internal DNS names, tools
      calling the service URL directly).
+   - Check every identifier that one hop accepts and another uses to route or look up (a business id
+     becoming a host label, a key matched case-insensitively): the producer's rule must fit inside every
+     consumer's, and no two accepted values may fold onto one.
    - For every finding of the domain agents, set `call_chain_status`: `unmitigated`,
      `mitigated-upstream` (only when the mitigation was read in the upstream code or configuration),
      `partially-mitigated`, `needs-confirmation`, or `not-applicable`.

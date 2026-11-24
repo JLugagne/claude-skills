@@ -26,6 +26,31 @@ sequence that reaches the bad branch — a reader should immediately see why it 
   read of its parent fail.
 - [ ] **Fail-open defaults**: a nil or unset policy, authorizer, hook or validator that allows instead
   of refusing or panicking at construction.
+- [ ] **Bound measured on another form than the one kept**: a length or size checked after a
+  normalisation (trim, case fold, NFC, unescape) while the raw value is stored, forwarded or embedded.
+  Every bound downstream (a cursor carrying the value, a key, a column, a header) is then computed on
+  the wrong length. Build one maximal input with the padding the check ignores (thousands of spaces
+  around a 200-character title) and follow it through every component, the sibling repos included.
+  Seen: a title bounded after trimming upstream, kept raw downstream, produced a list cursor its own
+  decoder refused.
+- [ ] **Encoded worst case against every bound**: for every value written into a bounded slot (column
+  or key size, cursor, header, URL, DNS label, file name, message), compute the worst case: the maximum
+  of each part times the expansion of every encoding applied on the way (percent-escaping x3, JSON
+  `\u` escapes x6, base64 x4/3, UTF-8 up to 4 bytes per character, separators). One table per slot:
+  parts, bounds, encodings, worst case, slot bound. Seen: two 256-character ids escaped into a
+  1,581-character key for a `STRING(1024)` column. The proposed action includes a test that derives the
+  slot bound from the real artifact (the migration file, the decoder constant) and builds the worst
+  value, so the next change to either side fails CI.
+- [ ] **Input limits applied to generated output**: a bound written for one input file or field reused
+  on a value the code builds (layers merged, a document re-encoded in another format, an archive
+  assembled from parts). Valid inputs then produce an output the code refuses (a 413 on a download).
+  For every validator called on a generated value, check that the inputs' bounds imply the output's.
+- [ ] **Identifiers crossing into a narrower namespace**: an identifier one component accepts (business
+  id, slug, key, name) and another uses where the rules are stricter: DNS label (at most 63 characters,
+  starting with a letter, minus any suffix the consumer appends such as `-preview`), URL segment, queue
+  or topic name, Kubernetes name, file name, case-insensitive lookups. The producer's rule must be a
+  subset of every consumer's, or the object exists but cannot be addressed. Read the consumers in the
+  sibling repos.
 
 ## 2. Error Handling
 - [ ] **Swallowed errors**: `_ = err` or an ignored return value where the error should be handled or
@@ -44,6 +69,16 @@ sequence that reaches the bad branch — a reader should immediately see why it 
   connections, context cancellation after the write).
 
 ## 3. Concurrency & Assumptions
+- [ ] **Decisions computed elsewhere, cached here**: a decision with a validity window (access, quota,
+  lease) computed by another service at T1 and cached on arrival at T2. The expiry must be counted from
+  the request start, and a window boundary falling between T1 and T2 makes the answer possibly stale
+  (read again or refuse). With a mocked clock, advance time inside the mocked call to prove it.
+- [ ] **Re-checks driven only by events**: anything long-lived (subscription, stream, session, cached
+  grant, lease, open download) re-validated only when an event arrives. List every way its condition
+  can end: an explicit event, time passing (a window or expiry that sends no event), an event lost on
+  the way (at-most-once publish, broker down), a restart. Each needs a trigger; a bounded periodic
+  re-check covers the lost event. Documentation that "accepts" the gap is a claim to check against the
+  decisions, not a decision.
 - [ ] **Unsynchronized shared mutable state**: results depending on goroutine scheduling or map
   iteration order.
 - [ ] **Read-then-use races across stores**: a reference read from one store (metadata row) then used

@@ -29,7 +29,7 @@
 
 ## 7. Caching & Intermediaries (A05:2021)
 - [ ] **Cache Directives on Authenticated Responses**: Verify tenant-scoped and authenticated responses (JSON and file downloads) carry `Cache-Control: private, no-store`, so no shared cache between the service and clients can store and replay them.
-- [ ] **Intermediary Response Integrity**: For every proxy or middleware that rewrites responses (compression, header filtering), verify headers stay consistent with the body (e.g. `Content-Encoding: gzip` with the uncompressed `Content-Length` truncates or hangs every download). Check each hop separately; stripping `Accept-Encoding` on the forwarded request does not protect the client-facing hop.
+- [ ] **Intermediary Response Integrity**: For every proxy or middleware that rewrites responses (compression, header filtering), verify headers stay consistent with the body (e.g. `Content-Encoding: gzip` with the uncompressed `Content-Length` truncates or hangs every download). Check each hop separately; stripping `Accept-Encoding` on the forwarded request does not protect the client-facing hop. The same holds for a client library that replaces the body with an empty one (304, 416, HEAD) and keeps the upstream `Content-Length`, which the service then relays.
 
 ## 6. Protocols: GraphQL, gRPC & WebSockets (API4, API8, API9:2023)
 - [ ] **GraphQL Introspection & Depth**: Verify introspection is disabled in production. Ensure query complexity/depth limiting and query timeouts prevent recursive DoS queries.

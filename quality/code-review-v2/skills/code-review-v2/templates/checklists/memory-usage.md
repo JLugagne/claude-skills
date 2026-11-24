@@ -22,5 +22,10 @@
   called code where a pointer would avoid the copy.
 
 ## 3. Lifetime
+- [ ] **Deferred cleanup with no later trigger**: cleanup that runs only as a side effect of a write (a
+  collection after each commit, a purge after each insert) and skips what is still within a grace period
+  or beyond its batch. If no further write comes, the skipped items stay forever. Require a trigger that
+  does not depend on the next write (a periodic sweep, a rerun scheduled after the grace), and a rerun
+  while a batch comes back full.
 - [ ] **Goroutine/object lifetime mismatches**: a goroutine or long-lived object outliving its intended
   scope with no cancellation path — flag the specific leak, not just "no context passed".

@@ -55,6 +55,11 @@ outside the UNION" is.
 - [ ] **One page, several snapshots**: a page or view assembled from several independent strong reads
   (page, then its children) can mix states of a concurrent write; use one read-only transaction when
   the result must be consistent.
+- [ ] **Key and column sizes against what is written, per backend**: for every bounded column or key
+  part (`STRING(1024)`, `VARCHAR(255)`, index key size limits), the longest value the domain accepts
+  after encoding (escaped composite keys, JSON, UTF-8 bytes against byte-sized limits). A backend with
+  `text` hides what another backend refuses: compare each migration set separately. Spanner counts
+  `STRING(n)` in characters and limits a whole key to 8 KiB.
 - [ ] **Per-commit limits**: count the mutations of the largest legitimate write (cascading deletes of
   interleaved children, every secondary-index entry) against the store's limit (Spanner 80,000).
 

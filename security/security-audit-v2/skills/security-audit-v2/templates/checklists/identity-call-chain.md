@@ -42,6 +42,13 @@ mitigates it because a document says so.
   handler keeping the uncompressed `Content-Length`, truncating every compressed response) still present
   in the hop in front. Compare module files of every hop.
 
+- [ ] **Identifiers crossing into a narrower namespace**: an identifier accepted by one hop (business id,
+  slug, tenant or app key) and used by another for routing or lookup under stricter or different rules:
+  a host label (at most 63 characters, letter first, minus the suffixes the router appends), a
+  case-insensitive match, a truncation, a different allowed alphabet. Check the producer's rule is a
+  subset of every consumer's: a value accepted upstream that the router cannot address is an outage,
+  and two values the router folds onto one (case, truncation, normalisation) reach each other's data.
+
 ## 3. Claims vs. Reality
 - [ ] **Security controls attributed to another component**: documentation or agent instruction files
   saying "the gateway authenticates / rate-limits / validates X". Verify each in that component's code or

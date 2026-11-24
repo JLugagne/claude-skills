@@ -44,6 +44,8 @@
 - [ ] **Per-Row Operators With Attacker-Sized Operands**: JSON containment (`@>`), array containment, `LIKE '%..%'` and regex operators cost O(n·m) per row when the attacker controls both the stored values and the filter. Verify the filter size is bounded and a statement timeout exists.
 - [ ] **Unindexed Queries & Heavy Filter Combinations**: Check search and filter endpoints allowing users to query arbitrary fields. Ensure expensive wildcard queries (`ILIKE '%...%'`) or queries on unindexed columns cannot be abused to lock database CPUs.
 
+- [ ] **Storage Growth Through Deferred Cleanup**: orphaned blobs or rows reclaimed only by a cleanup triggered by the next write, which skips items within a grace period or beyond a batch: replacing content repeatedly and then stopping leaves the replaced items stored forever. Check a sweep runs without a write.
+- [ ] **Bounds Applied to Generated Output**: an input bound reused on an output the service assembles (merged manifests, re-encoded documents, archives): valid inputs make a resource permanently unreadable (413), and an encoded key longer than its column makes a valid write fail on every retry.
 - [ ] **Platform Limits as Permanent DoS**: a legitimate or attacker-shaped state (an object shared with thousands of audiences) that makes one commit exceed the store's per-commit mutation limit (Spanner 80,000 incl. index entries) or a message size limit fails on every retry: the object can no longer be deleted or updated.
 
 ## 6. Algorithmic Complexity & ReDoS (CWE-1333)

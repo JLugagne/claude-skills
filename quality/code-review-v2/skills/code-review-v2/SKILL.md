@@ -1,6 +1,7 @@
 ---
 name: code-review-v2
 description: Perform a rigorous, adversarial non-security code review of a codebase — upfront scope negotiation (full project vs. MR/diff only, related repos), quality-dimension checklists (memory usage, comment verbosity, naming, architecture, dead code, missing tests, unnecessary tests, adversarial correctness, persistence, resilience, project conventions), cross-cutting passes on docs, test harness fidelity and query cost, optional runtime verification on a disposable database, isolated git worktrees, and an interactive HTML triage report where every finding can be validated, invalidated, delayed, and have its comment text and proposed action edited.
+allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git blame:*), Bash(git merge-base:*), Bash(git for-each-ref:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git ls-files:*), Bash(git ls-tree:*), Bash(git cat-file:*), Bash(git grep:*), Bash(git describe:*), Bash(git shortlog:*), Bash(git branch --list:*), Bash(git branch --show-current), Bash(git branch -a:*), Bash(git branch -r:*), Bash(git remote -v), Bash(git remote show:*), Bash(git config --get:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git worktree add:*), Bash(git worktree list:*), Bash(git worktree remove:*), Bash(git worktree prune:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(glab mr list:*), Bash(glab mr view:*), Bash(glab mr diff:*)
 author: JLugagne
 ---
 

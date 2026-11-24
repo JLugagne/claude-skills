@@ -1,6 +1,7 @@
 ---
 name: security-audit-v2
 description: Perform a comprehensive, domain-driven white-box security audit of a codebase — upfront interactive scope negotiation (including the related gateway and deployment repos), functional domain slicing with sprint task backlogs, an identity source map and hop-by-hop call-chain analysis, verification of the security claims the docs make, multi-agent scaling rules, isolated git worktrees, failing PoC tests for proof, settle commands for findings that depend on another hop, attack chain analysis, and state-of-the-art HTML and Markdown executive reports under .security-audit/.
+allowed-tools: Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git show:*), Bash(git blame:*), Bash(git merge-base:*), Bash(git for-each-ref:*), Bash(git rev-parse:*), Bash(git rev-list:*), Bash(git ls-files:*), Bash(git ls-tree:*), Bash(git cat-file:*), Bash(git grep:*), Bash(git describe:*), Bash(git shortlog:*), Bash(git branch --list:*), Bash(git branch --show-current), Bash(git branch -a:*), Bash(git branch -r:*), Bash(git remote -v), Bash(git remote show:*), Bash(git config --get:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git worktree add:*), Bash(git worktree list:*), Bash(git worktree remove:*), Bash(git worktree prune:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(glab mr list:*), Bash(glab mr view:*), Bash(glab mr diff:*)
 author: JLugagne
 ---
 
